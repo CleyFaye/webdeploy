@@ -24,10 +24,11 @@ setup(
     py_modules=['webdeploy'],
     packages=[
         'wdeploy',
+        'wdeploy.tasks',
     ],
     entry_points={
         'console_scripts': [
-            'wepdeploy=webdeploy:main'
+            'webdeploy=webdeploy:main'
         ],
     },
     long_description=read('README.md'),
