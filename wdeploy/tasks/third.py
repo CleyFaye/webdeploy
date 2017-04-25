@@ -19,7 +19,6 @@ from shutil import (
 from subprocess import Popen
 
 from wdeploy import (
-        config,
         task,
         utils,
         )
@@ -28,7 +27,8 @@ if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
 
 
-@task
+@task(sourcePathArguments=['listDir'],
+      destinationPathArguments=['jsDir', 'cssDir'])
 def third(listDir, jsDir, cssDir):
     """Read third-party dependencies descriptions and deploy the appropriate
     files.
@@ -57,7 +57,6 @@ def third(listDir, jsDir, cssDir):
     appropriate directories (<js path>/<prefix>/file.js)
     """
     # TODO: add support for CSS.
-    listDir = join(config().ROOT, listDir)
     for fileName in listdir(listDir):
         filePath = join(listDir, fileName)
         name = splitext(fileName)[0]
@@ -66,20 +65,18 @@ def third(listDir, jsDir, cssDir):
             thirdPath = prepareFiles(name, cfg['source'])
             try:
                 prefix = cfg['prefix']
-            except:
+            except KeyError:
                 prefix = name
             deployThird(
-                    name,
                     thirdPath,
                     prefix,
                     cfg['files'],
-                    join(config().PREFIX, jsDir),
-                    join(config().PREFIX, cssDir),
+                    jsDir,
+                    cssDir,
                     )
 
 
-def deployThird(name,
-                sourceDir,
+def deployThird(sourceDir,
                 prefix,
                 files,
                 jsDir,
@@ -87,12 +84,14 @@ def deployThird(name,
     """Copy files from third party source to deployment directory."""
     if 'js' in files:
         handleFiles(sourceDir, jsDir, prefix, files['js'], uglifyJS)
+    if 'css' in files:
+        handleFiles(sourceDir, cssDir, prefix, files['css'], cssmin)
 
 
 def handleFiles(sourceDir, destDir, prefix, files, handler):
     """Process list of files.
 
-    Will only update newer files, and chmod/chown them accordinyl.
+    Will only update newer files, and chmod/chown them accordingly.
     """
     for fileName in files:
         destName = files[fileName]
@@ -101,7 +100,7 @@ def handleFiles(sourceDir, destDir, prefix, files, handler):
         sourceTime = getmtime(srcPath)
         try:
             destTime = getmtime(destPath)
-        except:
+        except OSError:
             destTime = sourceTime - 1
         if sourceTime <= destTime:
             continue
@@ -116,6 +115,16 @@ def uglifyJS(sourcePath, destPath):
     """Uglify a JS file using uglifyjs."""
     uglifyJsPath = utils.which('uglifyjs')
     args = [uglifyJsPath, '-o', destPath, '-c', '--', sourcePath]
+    process = Popen(args)
+    result = process.wait()
+    if result != 0:
+        raise Exception('Error when minifying %s' % sourcePath)
+
+
+def cssmin(sourcePath, destPath):
+    """Minify a CSS file using yui-compressor."""
+    toolPath = utils.which('yui-compressor')
+    args = [toolPath, '-o', destPath, sourcePath]
     process = Popen(args)
     result = process.wait()
     if result != 0:
@@ -140,7 +149,7 @@ def prepareGIT(name, source):
     try:
         with open(infoFile, 'r') as inFile:
             installedString = inFile.read()
-    except:
+    except OSError:
         installedString = ''
 
     if 'tag' not in source:

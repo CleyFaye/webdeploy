@@ -21,7 +21,6 @@ from shutil import (
         )
 
 from wdeploy import (
-        config,
         task,
         utils,
         )
@@ -30,16 +29,17 @@ if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
 
 
-@task
+@task(sourcePathArguments=['sourceDir'],
+      destinationPathArguments=['destDir'],
+      )
 def synctree(sourceDir, destDir, deleteStalledFiles=True):
     """Synchronize the destination directory with the source directory.
 
     Any file in the destination directory not found in source will be deleted.
     """
-    rsync(
-            join(config().ROOT, sourceDir),
-            join(config().PREFIX, destDir),
-            deleteStalledFiles)
+    rsync(sourceDir,
+          destDir,
+          deleteStalledFiles)
 
 
 def copyfile(sourcePath, destPath):

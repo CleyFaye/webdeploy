@@ -14,7 +14,7 @@ if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
 
 
-@task
+@task()
 def a2site(enable, siteName):
     """Enable or disable an apache2 site configuration.
 

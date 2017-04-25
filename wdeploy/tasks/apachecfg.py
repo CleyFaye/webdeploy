@@ -18,7 +18,7 @@ if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
 
 
-@task
+@task()
 def apachecfg(name, apacheConfig):
     """Prepare the application to run on an apache2 server.
 

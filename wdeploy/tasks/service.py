@@ -15,7 +15,7 @@ if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
 
 
-@task
+@task()
 def service(action, serviceName):
     """Perform an action on a system service.
 

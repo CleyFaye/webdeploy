@@ -21,7 +21,7 @@ if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
 
 
-@task
+@task()
 def create_symlink(source, destination):
     """Create a symbolic link (if it doesn't exist already).
 

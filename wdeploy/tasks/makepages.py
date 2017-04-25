@@ -7,7 +7,6 @@ from os.path import (
         join,
         )
 from wdeploy import (
-        config,
         task,
         utils,
         )
@@ -16,7 +15,9 @@ if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
 
 
-@task
+@task(sourcePathArguments=['sourceDir'],
+      destinationPathArguments=['targetDir'],
+      )
 def makepages(sourceDir, targetDir, headerNames, footerNames, pagesList):
     """Create static page files by merging header, body and footer.
 
@@ -34,7 +35,7 @@ def makepages(sourceDir, targetDir, headerNames, footerNames, pagesList):
     headerTime = 0
     if headerNames:
         for headerName in headerNames:
-            headerPath = join(config().ROOT, sourceDir, '%s.html' % headerName)
+            headerPath = join(sourceDir, '%s.html' % headerName)
             thisHeaderTime = getmtime(headerPath)
             if thisHeaderTime > headerTime:
                 headerTime = thisHeaderTime
@@ -44,7 +45,7 @@ def makepages(sourceDir, targetDir, headerNames, footerNames, pagesList):
     footerTime = 0
     if footerNames:
         for footerName in footerNames:
-            footerPath = join(config().ROOT, sourceDir, '%s.html' % footerName)
+            footerPath = join(sourceDir, '%s.html' % footerName)
             thisFooterTime = getmtime(footerPath)
             if thisFooterTime > footerTime:
                 footerTime = thisFooterTime
@@ -57,8 +58,8 @@ def makepages(sourceDir, targetDir, headerNames, footerNames, pagesList):
         decoratorTime = footerTime
 
     for page in pagesList:
-        sourcePath = join(config().ROOT, sourceDir, '%s.html' % page[1])
-        targetPath = join(config().PREFIX, targetDir, '%s.html' % page[1])
+        sourcePath = join(sourceDir, '%s.html' % page[1])
+        targetPath = join(targetDir, '%s.html' % page[1])
 
         sourceTime = getmtime(sourcePath)
         try:

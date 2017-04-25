@@ -25,7 +25,7 @@ if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
 
 
-@task
+@task(sourcePathArguments=['script'])
 def makefile(script, target, args, runAsRoot):
     """Run a Makefile.
 
@@ -37,7 +37,7 @@ def makefile(script, target, args, runAsRoot):
     If runAsRoot is False, the script will be run as the user in the
     PREFIX_USER config.
     """
-    makefileDir = abspath(join(config().ROOT, dirname(script)))
+    makefileDir = abspath(dirname(script))
     chdir(makefileDir)
     if runAsRoot:
         callArg = []
