@@ -4,26 +4,27 @@ Utility functions for deploy.py script.
 """
 from codecs import open as codecs_open
 import grp
-from os import (
-        access,
-        chmod,
-        chown,
-        environ,
-        makedirs,
-        walk,
-        X_OK,
-        )
-from os.path import (
-        isdir,
-        isfile,
-        join,
-        pathsep,
-        relpath,
-        )
+from os import (access,
+                chmod,
+                chown,
+                environ,
+                makedirs,
+                walk,
+                X_OK,
+                getmtime,
+                )
+from os.path import (isdir,
+                     isfile,
+                     join,
+                     pathsep,
+                     relpath,
+                     )
 import pwd
 import platform
 
-from wdeploy import config
+from wdeploy import (config,
+                     dependencies,
+                     )
 
 if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
@@ -123,9 +124,10 @@ def which(toolName):
             if isexecutable(path):
                 break
     if not isexecutable(path):
-        raise Exception(
-                'Tool "%s" not found (from %s env. var = %s)' %
-                (toolName, varSrc, environ[varSrc]))
+        raise Exception('Tool "%s" not found (from %s env. var = %s)' %
+                        (toolName,
+                         varSrc,
+                         environ[varSrc]))
     myself.cache[toolName] = path
     return path
 
@@ -170,3 +172,71 @@ def walkfiles(path):
         localPath = relpath(dirPath, path)
         for fileName in files:
             yield (localPath, fileName)
+
+
+def checkDependencies(baseDir,
+                      includeDirs,
+                      validityCheck,
+                      dependencyCheck,
+                      outputCB,
+                      updateCB,
+                      ):
+    """Crawl a directory to find updated files.
+
+    Parameters
+    ----------
+    baseDir : string
+        The base directory, containing potentially updated files.
+        Only files from this directory (and subdirectory) might be returned by
+        checkDependencies().
+    includeDirs : list(string)
+        A list of extra directories to check for include files. These files will
+        be used to check if a file in baseDir needs to be rebuilt or not, but
+        they will not be returned by checkDependencies().
+    validityCheck : runnable
+        A runnable that will receive an absolute file path as its only
+        argument, and must return either True if the file is valid or False
+        otherwise.
+    dependencyCheck : runnable
+        A runnable that will receive an absolute file path as its only
+        argument, and must return the list of dependency as a list of relative
+        file path.
+        This runnable can also return None in case there are no dependencies.
+    outputCB : runnable
+        A runnable that will receive a relative file path, and must return the
+        absolute file path where the corresponding output file is located.
+        This is required, as it is the only way for checkDependencies() to check
+        modification times on both input/dependencies and output.
+    updateCB : runnable
+        A runnable that will receive two arguments: the absolute file name of a
+        source file (in baseDir) and the absolute file name of the destination
+        file (as returned by outputCB).
+        This runnable is only called when a file need updating.
+    """
+    sourceFilesPath = walkfiles(baseDir)
+    allFiles = {x[0]: {'modifiedDate': None,
+                       'relativePath': x[0],
+                       'fullPath': join(baseDir, x[0]),
+                       'deps': [],
+                       }
+                for x in sourceFilesPath
+                if validityCheck(join(baseDir, x[0]))
+                }
+    dependencyFiles = {}
+
+    for fileObj in allFiles:
+        dependencies._fillDeps(fileObj,
+                               allFiles,
+                               dependencyFiles,
+                               includeDirs,
+                               dependencyCheck,
+                               )
+
+    for fileObj in allFiles:
+        outputPath = outputCB(fileObj['relativePath'])
+        dependencies._updateMTime(fileObj)
+        outputMDate = getmtime(outputPath)
+        if outputMDate <= fileObj['modifiedDate']:
+            updateCB(fileObj['fullPath'],
+                     outputPath,
+                     )
