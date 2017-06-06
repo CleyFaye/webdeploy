@@ -72,15 +72,25 @@ def apachecfg(name, apacheConfig):
             # VHost header
             if useTLS:
                 outFile.write('<VirtualHost *:443>\n')
+                processGroupSuffix = '_tls'
             else:
                 outFile.write('<VirtualHost *:80>\n')
+                processGroupSuffix = ''
             outFile.write('ServerName "%s"\n' % hostName)
             # Log Level
             outFile.write('LogLevel %s\n' % logLevel)
             # WSGI Script
-            outFile.write('WSGIDaemonProcess %s python-path=%s\n' %
-                          (config().PROJECT_NAME, pythonPath))
-            outFile.write('WSGIProcessGroup %s\n' % config().PROJECT_NAME)
+            outFile.write('WSGIDaemonProcess %s%s python-path=%s\n' %
+                          (config().PROJECT_NAME,
+                           processGroupSuffix,
+                           pythonPath,
+                           ),
+                          )
+            outFile.write('WSGIProcessGroup %s%s\n' %
+                          (config().PROJECT_NAME,
+                           processGroupSuffix,
+                           ),
+                          )
             outFile.write('WSGIScriptAlias / %s\n' % fullCGIPath)
             apacheGrantAccess(outFile, 'cgi')
             # Aliases
