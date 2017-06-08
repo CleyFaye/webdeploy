@@ -1,34 +1,37 @@
 # encoding=utf-8
-"""
-Create WSGI CGI scripts for Django applications.
-"""
-from os.path import (
-        dirname,
-        join,
-        )
-
-from wdeploy import (
-        task,
-        utils,
-        )
+"""Create WSGI CGI scripts for Django applications."""
+from os.path import isfile
+from wdeploy import (task,
+                     utils,
+                     )
+from logging import getLogger
 
 if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
+logg = getLogger(__name__)
+
+
+SCRIPT_BASE = """import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "conf.settings")
+from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application()"""
 
 
 @task(destinationPathArguments=['path'])
 def cgi(path):
     """Create a wsgi CGI script in the given path.
 
+    Notes
+    -----
     This is a django script only. No customisation needed.
+    If the file already exist, it is not replaced or erased.
     """
-    directoryPath = dirname(path)
-    utils.real_mkdir(directoryPath)
+    if isfile(path):
+        logg.info('WSGI script already exists; not overwriting')
+        return
+    logg.info('Creating WSGI script in "%s"' % path)
+    utils.makeParentPath(path)
     with utils.open_utf8(path, 'w') as outFile:
-        outFile.write("""import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "conf.settings")
-from django.core.wsgi import get_wsgi_application
-application = get_wsgi_application()
-""")
+        outFile.write(SCRIPT_BASE)
     utils.cfg_chown(path)
     utils.cfg_chmod(path)

@@ -1,44 +1,46 @@
 # encoding=utf-8
-"""
-Deploy third-party files
-"""
+"""Deploy third-party files"""
 import json
-from os import (
-        listdir,
-        )
-from os.path import (
-        dirname,
-        getmtime,
-        join,
-        isdir,
-        splitext,
-        )
-from shutil import (
-        rmtree,
-        )
+from os import listdir
+from os.path import (getmtime,
+                     join,
+                     isdir,
+                     splitext,
+                     )
+from shutil import rmtree
 from subprocess import Popen
-
-from wdeploy import (
-        task,
-        utils,
-        )
+from wdeploy import (task,
+                     utils,
+                     )
+from logging import getLogger
 
 if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
+logg = getLogger(__name__)
 
 
 @task(sourcePathArguments=['listDir'],
       destinationPathArguments=['jsDir', 'cssDir'])
-def third(listDir, jsDir, cssDir):
-    """Read third-party dependencies descriptions and deploy the appropriate
-    files.
+def third(listDir,
+          jsDir,
+          cssDir,
+          ):
+    """Read third-party dependencies descriptions and deploy them
 
-    Arguments must be:
-    - Directory containing config files. Relative to ROOT.
-    - Output directory for JavaScript files. Relative to PREFIX.
-    - Output directory for CSS files. Relative to PREFIX.
+    Parameters
+    ----------
+    listDir : string
+        The path to a directory containing the third party config files.
+        Relative to ROOT.
+    jsDir : string
+        The output directory for Javascript files. Relative to PREFIX.
+    cssDir : string
+        The output directory for CSS files. Relative to PREFIX.
 
-    Config files are JSON strings that must represent a dictionary.
+
+    Notes
+    -----
+    Config files are JSON files that must represent a dictionary.
     Possible properties are:
     - source: the source of the third party files. Have a mandatory property
       named "type".
@@ -56,24 +58,24 @@ def third(listDir, jsDir, cssDir):
     In all cases, destination names will be prefixed with "prefix" and put in
     appropriate directories (<js path>/<prefix>/file.js)
     """
-    # TODO: add support for CSS.
     for fileName in listdir(listDir):
-        filePath = join(listDir, fileName)
+        filePath = join(listDir,
+                        fileName)
         name = splitext(fileName)[0]
         with open(filePath, 'r') as inFile:
             cfg = json.load(inFile)
-            thirdPath = prepareFiles(name, cfg['source'])
+            thirdPath = prepareFiles(name,
+                                     cfg['source'])
             try:
                 prefix = cfg['prefix']
             except KeyError:
                 prefix = name
-            deployThird(
-                    thirdPath,
-                    prefix,
-                    cfg['files'],
-                    jsDir,
-                    cssDir,
-                    )
+            deployThird(thirdPath,
+                        prefix,
+                        cfg['files'],
+                        jsDir,
+                        cssDir,
+                        )
 
 
 def deployThird(sourceDir,
@@ -81,57 +83,115 @@ def deployThird(sourceDir,
                 files,
                 jsDir,
                 cssDir):
-    """Copy files from third party source to deployment directory."""
+    """Copy files from third party source to deployment directory.
+
+    Parameters
+    ----------
+    sourceDir : string
+        The source path where are stored the files for the dependency
+    prefix : string
+        The dependency's prefix name
+    files : dict
+        A dictionary where values are a list of filenames, and keys can be 'js'
+        and 'css'
+    jsDir : string
+        The base Javscript directory. Javascript files will be copied there
+        under the prefix directory.
+    cssDir : string
+        The base CSS directory. CSS files will be copied there under the prefix
+        directory.
+    """
     if 'js' in files:
-        handleFiles(sourceDir, jsDir, prefix, files['js'], uglifyJS)
+        handleFiles(sourceDir,
+                    jsDir,
+                    prefix,
+                    files['js'],
+                    uglifyJS,
+                    )
     if 'css' in files:
-        handleFiles(sourceDir, cssDir, prefix, files['css'], cssmin)
+        handleFiles(sourceDir,
+                    cssDir,
+                    prefix,
+                    files['css'],
+                    cssmin,
+                    )
 
 
 def handleFiles(sourceDir, destDir, prefix, files, handler):
-    """Process list of files.
+    """Process a list of files.
 
+    Parameters
+    ----------
+    sourceDir : string
+        The source path, where files can be found
+    destDir : string
+        The destination path, where files will be copied/updated
+    prefix : string
+        The dependency prefix. All files will be copied using this prefix as a
+        new subdirectory
+    files : list(string)
+        List of files, relative to sourceDir
+    handler : callable
+        Callable doing the actual copy work. Called with two arguments: the full
+        path to the source, and the full path to the destination.
+
+
+    Notes
+    -----
     Will only update newer files, and chmod/chown them accordingly.
     """
     for fileName in files:
         destName = files[fileName]
-        destPath = join(destDir, prefix, destName)
-        srcPath = join(sourceDir, fileName)
+        destPath = join(destDir,
+                        prefix,
+                        destName)
+        srcPath = join(sourceDir,
+                       fileName)
         sourceTime = getmtime(srcPath)
         try:
             destTime = getmtime(destPath)
         except OSError:
-            destTime = sourceTime - 1
+            destTime = 0
         if sourceTime <= destTime:
             continue
-        parentDir = dirname(destPath)
-        utils.real_mkdir(parentDir)
+        utils.makeParentPath(destPath)
         handler(srcPath, destPath)
         utils.cfg_chown(destPath)
         utils.cfg_chmod(destPath)
 
 
-def uglifyJS(sourcePath, destPath):
+def uglifyJS(sourcePath,
+             destPath,
+             ):
     """Uglify a JS file using uglifyjs."""
     uglifyJsPath = utils.which('uglifyjs')
-    args = [uglifyJsPath, '-o', destPath, '-c', '--', sourcePath]
+    args = [uglifyJsPath,
+            '-o', destPath,
+            '-c', '--',
+            sourcePath]
     process = Popen(args)
     result = process.wait()
     if result != 0:
         raise Exception('Error when minifying %s' % sourcePath)
 
 
-def cssmin(sourcePath, destPath):
+def cssmin(sourcePath,
+           destPath,
+           ):
     """Minify a CSS file using yui-compressor."""
     toolPath = utils.which('yui-compressor')
-    args = [toolPath, '-o', destPath, sourcePath]
+    args = [toolPath,
+            '-o', destPath,
+            sourcePath]
     process = Popen(args)
     result = process.wait()
     if result != 0:
         raise Exception('Error when minifying %s' % sourcePath)
 
 
-def prepareFiles(name, source):
+def prepareFiles(name,
+                 source,
+                 ):
     """Prepare files according to the settings in source.
 
     source if taken from a config file.
@@ -139,13 +199,17 @@ def prepareFiles(name, source):
     exception is raised.
     """
     if source['type'] == 'git':
-        return prepareGIT(name, source)
+        return prepareGIT(name,
+                          source)
     raise NotImplementedError('Unsupported source type: %s' % source['type'])
 
 
-def prepareGIT(name, source):
+def prepareGIT(name,
+               source,
+               ):
     """Prepare files from a GIT repository."""
-    infoFile = join(utils.dataPath(), '%s.third' % name)
+    infoFile = join(utils.dataPath(),
+                    '%s.third' % name)
     try:
         with open(infoFile, 'r') as inFile:
             installedString = inFile.read()
@@ -158,7 +222,8 @@ def prepareGIT(name, source):
         tagName = source['tag']
     expectedInstallString = '%s:%s' % (source['url'], tagName)
     thirdPathName = '%s.files' % name
-    thirdPath = join(utils.dataPath(), thirdPathName)
+    thirdPath = join(utils.dataPath(),
+                     thirdPathName)
     if expectedInstallString == installedString:
         return thirdPath
 
@@ -166,21 +231,32 @@ def prepareGIT(name, source):
         rmtree(thirdPath)
 
     gitPath = utils.which(utils.GIT)
-    cloneProcessArgs = [gitPath, 'clone', source['url'], thirdPathName]
-    cloneProcess = Popen(cloneProcessArgs, cwd=utils.dataPath())
+    cloneProcessArgs = [gitPath,
+                        'clone',
+                        source['url'],
+                        thirdPathName,
+                        ]
+    cloneProcess = Popen(cloneProcessArgs,
+                         cwd=utils.dataPath())
     cloneResult = cloneProcess.wait()
     if cloneResult != 0:
         raise Exception('Error when cloning repository for %s' % name)
 
     if tagName:
-        checkoutProcessArgs = [gitPath, 'checkout', 'tags/%s' % source['tag']]
+        checkoutProcessArgs = [gitPath,
+                               'checkout',
+                               'tags/%s' % source['tag']]
     else:
-        checkoutProcessArgs = [gitPath, 'checkout', 'master']
-    checkoutProcess = Popen(checkoutProcessArgs, cwd=thirdPath)
+        checkoutProcessArgs = [gitPath,
+                               'checkout',
+                               'master']
+    checkoutProcess = Popen(checkoutProcessArgs,
+                            cwd=thirdPath)
     checkoutResult = checkoutProcess.wait()
     if checkoutResult != 0:
         raise Exception('Error when checking out tag %s for %s' %
-                        (tagName, name))
+                        (tagName,
+                         name))
 
     with open(infoFile, 'w') as outFile:
         outFile.write(expectedInstallString)

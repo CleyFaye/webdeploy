@@ -1,31 +1,43 @@
 # encoding=utf-8
-from os.path import join
-from wdeploy import config
-
-
-"""
-Task management.
+"""Task management.
 
 Decorators and functions required to define and run tasks.
 """
+from os.path import join
+from wdeploy import config
+from logging import getLogger
+
 if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
+logg = getLogger(__name__)
 
 
 def task(sourcePathArguments=None,
          destinationPathArguments=None,
          ):
-    """Decorator for tasks.
+    """Returns a decorator for tasks.
+
+    Parameters
+    ----------
+    sourcePathArguments : list(string)
+        A list of arguments names that will be prefixed by config().ROOT before
+        running the task function.
+    destinationPathArguments : list(string)
+        A list of arguments names that will be prefixed by config().PREFIX
+        before running the task function.
+
+
+    Returns
+    -------
+    A suitable decorator to mark a function as a runnable task.
+
+
+    Notes
+    -----
 
     The config file contain a list of task definitions.
     A task is simply a python function called with the arguments from the task
     definition.
-
-    The sourcePathArguments is a list of kw args that will be prefixed with
-    config().ROOT
-    The destinationPathArguments is a list of kw args that will be prefixed
-    with config().PREFIX
-    Both can be either a string, or a list.
     """
     def decorator(func):
         myself = task
@@ -38,20 +50,35 @@ def task(sourcePathArguments=None,
             args = kwargs.copy()
             if sourcePathArguments:
                 for argName in sourcePathArguments:
-                    if isinstance(args[argName], str):
-                        args[argName] = join(config().ROOT, args[argName])
+                    if isinstance(args[argName],
+                                  str):
+                        args[argName] = join(config().ROOT,
+                                             args[argName],
+                                             )
                     else:
-                        args[argName] = [join(config().ROOT, x)
-                                         for x in args[argName]]
+                        args[argName] = [join(config().ROOT,
+                                              x,
+                                              )
+                                         for x in args[argName]
+                                         ]
             if destinationPathArguments:
                 for argName in destinationPathArguments:
-                    if isinstance(args[argName], str):
-                        args[argName] = join(config().PREFIX, args[argName])
+                    if isinstance(args[argName],
+                                  str,
+                                  ):
+                        args[argName] = join(config().PREFIX,
+                                             args[argName],
+                                             )
                     else:
-                        args[argName] = [join(config().PREFIX, x)
-                                         for x in args[argName]]
+                        args[argName] = [join(config().PREFIX,
+                                              x,
+                                              )
+                                         for x in args[argName]
+                                         ]
             func(**args)
-        myself.taskList[func.func_name] = processTask
+        myself.taskList[func.__name__] = processTask
+        logg.debug('Registering task %s'
+                   % func.__name__)
         return None
     return decorator
 
@@ -59,9 +86,19 @@ def task(sourcePathArguments=None,
 def runTask(taskDesc):
     """Call a task.
 
-    A task definition is a list starting with the task name, and followed by
-    the task function and arguments.
+    Parameters
+    ----------
+    taskDesc : dict
+        The task definition. If must contain the properties 'name' and 'args'.
+        'name' is the name of the task (in fact, the name of a function using
+        the @task decorator), and 'args' is a list of keyword arguments that
+        will be passed to the task function.
     """
     taskName = taskDesc['name']
     taskArgs = taskDesc['args'].copy()
+    logg.info('Running task "%s" (%s)'
+              % (taskName,
+                 taskArgs,
+                 ),
+              )
     task.taskList[taskName](**taskArgs)
