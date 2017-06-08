@@ -11,13 +11,14 @@ from os import (access,
                 makedirs,
                 walk,
                 X_OK,
-                getmtime,
                 )
+import subprocess
 from os.path import (isdir,
                      isfile,
                      join,
                      pathsep,
                      relpath,
+                     getmtime,
                      )
 import pwd
 import platform
@@ -84,6 +85,14 @@ def open_utf8(fileName, mode):
     return codecs_open(fileName, mode, encoding='utf-8')
 
 
+def isToolPresent(toolName):
+    try:
+        which(toolName)
+        return True
+    except RuntimeError:
+        return False
+
+
 def which(toolName):
     """Return the full path to a program based on it's name.
 
@@ -124,10 +133,10 @@ def which(toolName):
             if isexecutable(path):
                 break
     if not isexecutable(path):
-        raise Exception('Tool "%s" not found (from %s env. var = %s)' %
-                        (toolName,
-                         varSrc,
-                         environ[varSrc]))
+        raise RuntimeError('Tool "%s" not found (from %s env. var = %s)' %
+                           (toolName,
+                            varSrc,
+                            environ[varSrc]))
     myself.cache[toolName] = path
     return path
 
@@ -176,6 +185,7 @@ def walkfiles(path):
 
 def checkDependencies(baseDir,
                       includeDirs,
+                      localInclude,
                       validityCheck,
                       dependencyCheck,
                       outputCB,
@@ -193,6 +203,9 @@ def checkDependencies(baseDir,
         A list of extra directories to check for include files. These files will
         be used to check if a file in baseDir needs to be rebuilt or not, but
         they will not be returned by checkDependencies().
+    localInclude : bool,
+        Indicate if the include dir list should also have the current file's
+        directory appended to it.
     validityCheck : runnable
         A runnable that will receive an absolute file path as its only
         argument, and must return either True if the file is valid or False
@@ -212,6 +225,12 @@ def checkDependencies(baseDir,
         source file (in baseDir) and the absolute file name of the destination
         file (as returned by outputCB).
         This runnable is only called when a file need updating.
+
+    Returns
+    -------
+    list(string)
+        Return the list of all files that were checked by this call. This list
+        is made of absolute path.
     """
     sourceFilesPath = walkfiles(baseDir)
     allFiles = {x[0]: {'modifiedDate': None,
@@ -229,14 +248,54 @@ def checkDependencies(baseDir,
                                allFiles,
                                dependencyFiles,
                                includeDirs,
+                               localInclude,
                                dependencyCheck,
                                )
 
+    output = []
     for fileObj in allFiles:
         outputPath = outputCB(fileObj['relativePath'])
+        output.append(outputPath)
         dependencies._updateMTime(fileObj)
         outputMDate = getmtime(outputPath)
         if outputMDate <= fileObj['modifiedDate']:
             updateCB(fileObj['fullPath'],
                      outputPath,
                      )
+
+
+def pipeRun(binaryName,
+            inputStream,
+            args):
+    """Run a program, providing input as the standard input.
+
+    Parameters
+    ----------
+    binaryName : string
+        Name of the program to run. This will be passed as-is to which()
+    inputStream : file
+        Source for the program standard input. Can be None.
+    args : list
+        List of arguments to pass to the program
+
+
+    Returns
+    -------
+    process
+        The process
+
+
+    Notes
+    -----
+    The value returned is a Popen object, where stdout is PIPEd, and stderr
+    silenced.
+    Since stdout is using a pipe in the child process, caller is responsible of
+    reading from it. If not read, the child process might block when writing.
+    """
+    args = [which(binaryName)] + args
+    result = subprocess.Popen(args,
+                              stdin=inputStream or subprocess.DEVNULL,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.DEVNULL,
+                              )
+    return result

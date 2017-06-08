@@ -2,6 +2,7 @@
 from os.path import (join,
                      isfile,
                      getmtime,
+                     dirname,
                      )
 
 
@@ -9,29 +10,30 @@ def _getDependencyFile(dependencyRelPath,
                        allFiles,
                        dependencyFiles,
                        includeDirs,
+                       localInclude,
                        dependencyCheck,
                        ):
     """Update dependencyFiles and return the requested file object"""
-    if dependencyRelPath in allFiles:
-        return allFiles[dependencyRelPath]
     if dependencyRelPath in dependencyFiles:
         return dependencyFiles[dependencyRelPath]
-    for includeDir in includeDirs:
-        candidatePath = join(includeDir, dependencyRelPath)
-        if isfile(join(includeDir, dependencyRelPath)):
-            newFileObject = {'modifiedDate': None,
-                             'relativePath': dependencyRelPath,
-                             'fullPath': candidatePath,
-                             'deps': [],
-                             }
-            dependencyFiles[dependencyRelPath] = newFileObject
-            _fillDeps(newFileObject,
-                      allFiles,
-                      dependencyFiles,
-                      includeDirs,
-                      dependencyCheck,
-                      )
-            return newFileObject
+    if includeDirs:
+        for includeDir in includeDirs:
+            candidatePath = join(includeDir, dependencyRelPath)
+            if isfile(join(includeDir, dependencyRelPath)):
+                newFileObject = {'modifiedDate': None,
+                                 'relativePath': dependencyRelPath,
+                                 'fullPath': candidatePath,
+                                 'deps': [],
+                                 }
+                dependencyFiles[dependencyRelPath] = newFileObject
+                _fillDeps(newFileObject,
+                          allFiles,
+                          dependencyFiles,
+                          includeDirs,
+                          localInclude,
+                          dependencyCheck,
+                          )
+                return newFileObject
     return RuntimeError('Missing dependency: %s' % dependencyRelPath)
 
 
@@ -39,17 +41,21 @@ def _fillDeps(fileObject,
               allFiles,
               dependencyFiles,
               includeDirs,
+              localInclude,
               dependencyCheck,
               ):
     """Convert a list of string representing the deps to file objects"""
     dependencies = dependencyCheck(fileObject['fullPath'])
     if not dependencies:
         return
+    if localInclude:
+        includeDirs = includeDirs + [dirname(fileObject['fullPath'])]
     for dependency in dependencies:
         dependencyFile = _getDependencyFile(dependency,
                                             allFiles,
                                             dependencyFiles,
                                             includeDirs,
+                                            localInclude,
                                             dependencyCheck,
                                             )
         if _checkDependencies(fileObject, dependencyFile):
