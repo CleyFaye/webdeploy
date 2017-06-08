@@ -1,3 +1,4 @@
+# encoding=utf-8
 from .a2site import a2site
 from .apachecfg import apachecfg
 from .cgi import cgi

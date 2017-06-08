@@ -1,77 +1,94 @@
 # encoding=utf-8
-"""
-Generate static pages.
-"""
-from os.path import (
-        getmtime,
-        join,
-        )
-from wdeploy import (
-        task,
-        utils,
-        )
+"""Generate static pages."""
+from os.path import (getmtime,
+                     join,
+                     )
+from wdeploy import (task,
+                     utils,
+                     )
+from logging import getLogger
 
 if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
+logg = getLogger(__name__)
 
 
 @task(sourcePathArguments=['sourceDir'],
       destinationPathArguments=['targetDir'],
       )
-def makepages(sourceDir, targetDir, headerNames, footerNames, pagesList):
-    """Create static page files by merging header, body and footer.
+def makepages(sourceDir,
+              targetDir,
+              headerNames,
+              footerNames,
+              pagesList):
+    """Create files by merging headers, body and footers.
 
-    headerNames and footerNames are array of filename in sourceDir.
-    They are added in order to each final pages.
-    pagesList is a list of tuples containing the page title and the page body
-    file, relative to sourceDir.
+    Parameters
+    ----------
+    sourceDir : string
+        The path to all the files to merge together. Relative to ROOT
+    targetDir : string
+        The path to put created files into. Relative to PREFIX
+    headerNames : list(string)
+        List of headers to prepend to bodies (in order). The names listed here
+        will get the '.html' suffix appended to them, and the script will look
+        for them in sourceDir.
+    footerNames : list(string)
+        List of footers. Same rules as headerNames.
+    pagesList : list(tuple(string,string)
+        List of pages to generate. The tuples contain the title of the page, and
+        the name of the file to use as the body. Same rules applies as for
+        headerNames.
 
-    The file suffix .html will be appended to file names.
 
+    Notes
+    -----
     The title will be used anywhere the '%TITLE%' string is used (header, body,
     footer).
     """
     header = u''
-    headerTime = 0
+    decoratorTime = 0
     if headerNames:
+        logg.info('Reading headers for file merging')
         for headerName in headerNames:
+            logg.debug('Reading header: %s' % headerName)
             headerPath = join(sourceDir, '%s.html' % headerName)
             thisHeaderTime = getmtime(headerPath)
-            if thisHeaderTime > headerTime:
-                headerTime = thisHeaderTime
+            if thisHeaderTime > decoratorTime:
+                decoratorTime = thisHeaderTime
             with utils.open_utf8(headerPath, 'r') as inFile:
                 header += inFile.read()
     footer = u''
-    footerTime = 0
     if footerNames:
+        logg.info('Reading footers for file merging')
         for footerName in footerNames:
+            logg.debug('Reading footer: %s' % footerName)
             footerPath = join(sourceDir, '%s.html' % footerName)
             thisFooterTime = getmtime(footerPath)
-            if thisFooterTime > footerTime:
-                footerTime = thisFooterTime
+            if thisFooterTime > decoratorTime:
+                decoratorTime = thisFooterTime
             with utils.open_utf8(footerPath, 'r') as inFile:
                 footer += inFile.read()
 
-    if headerTime > footerTime:
-        decoratorTime = headerTime
-    else:
-        decoratorTime = footerTime
+    logg.info('Generating merged files')
+    for title, bodyFile in pagesList:
+        logg.debug('Merging file %s' % bodyFile)
+        sourcePath = join(sourceDir, '%s.html' % bodyFile)
+        targetPath = join(targetDir, '%s.html' % bodyFile)
 
-    for page in pagesList:
-        sourcePath = join(sourceDir, '%s.html' % page[1])
-        targetPath = join(targetDir, '%s.html' % page[1])
-
-        sourceTime = getmtime(sourcePath)
+        sourceTime = min(getmtime(sourcePath),
+                         decoratorTime,
+                         )
         try:
             targetTime = getmtime(targetPath)
         except OSError:
             targetTime = 0
 
-        if sourceTime <= targetTime and decoratorTime <= targetTime:
+        if sourceTime <= targetTime:
             continue
 
         with utils.open_utf8(targetPath, 'w') as outFile,\
                 utils.open_utf8(sourcePath, 'r') as inFile:
             content = u'%s%s%s' % (header, inFile.read(), footer)
-            content = content.replace(u'%TITLE%', page[0])
+            content = content.replace(u'%TITLE%', title)
             outFile.write(content)

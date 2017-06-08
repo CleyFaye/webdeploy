@@ -1,39 +1,49 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # encoding=utf-8
 
-from sys import argv
-from os import (
-        getuid,
-        )
+from sys import (argv,
+                 executable,
+                 )
+from os import getuid
 from subprocess import call
+from wdeploy import (config,
+                     runTask,
+                     utils,
+                     )
+from logging import getLogger
 
-from wdeploy import (
-        config,
-        runTask,
-        utils,
-        )
+logg = getLogger(__name__)
 
 
 def run():
+    """Run all tasks from the configuration."""
     for taskId, task in enumerate(config().TASKS):
-        print('Running task %s: %s' % (taskId + 1, task[0]))
+        logg.info('Running task %s: %s'
+                  % (taskId + 1,
+                     task[0],
+                     ),
+                  )
         runTask(task)
 
 
 def sudoMe():
+    """Rerun self using sudo."""
     try:
+        logg.info('Calling sudo to rerun self')
         sudo = utils.which(utils.SUDO)
-        callArg = [sudo, '-E', 'python', argv[0]]
+        callArg = [sudo,
+                   '-E',
+                   executable,
+                   argv[0],
+                   ]
         call(callArg)
-    except Exception as e:
-        print('sudo not found; re-run this script as root.')
-        print(e)
+    except Exception:
+        logg.error('sudo not found; re-run this script as root.')
 
 
 def main():
     if getuid() != 0:
-        print('This script need to be root to operate correctly')
-        print('Attempting to re-run the script with sudo')
+        logg.warn('This script need to be root to operate correctly')
         sudoMe()
     else:
         run()

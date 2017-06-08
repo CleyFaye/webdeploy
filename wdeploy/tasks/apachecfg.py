@@ -1,21 +1,19 @@
 # encoding=utf-8
-"""
-Generate Apache configuration for Django application.
-"""
-from os.path import (
-        dirname,
-        join,
-        )
+"""Generate Apache configuration for Django application."""
+from os.path import (dirname,
+                     join,
+                     )
 
-from wdeploy import (
-        config,
-        runTask,
-        task,
-        utils,
-        )
+from wdeploy import (config,
+                     runTask,
+                     task,
+                     utils,
+                     )
+from logging import getLogger
 
 if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
+logg = getLogger(__name__)
 
 
 @task()
