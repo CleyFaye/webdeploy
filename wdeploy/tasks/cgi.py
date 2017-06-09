@@ -4,6 +4,10 @@ from os.path import isfile
 from wdeploy import (task,
                      utils,
                      )
+from wdeploy.user import (as_user,
+                          prefix_user,
+                          prefix_group,
+                          )
 from logging import getLogger
 
 if __name__ == '__main__':
@@ -18,6 +22,9 @@ application = get_wsgi_application()"""
 
 
 @task(destinationPathArguments=['path'])
+@as_user(userName=prefix_user,
+         groupName=prefix_group,
+         )
 def cgi(path):
     """Create a wsgi CGI script in the given path.
 
@@ -33,5 +40,3 @@ def cgi(path):
     utils.makeParentPath(path)
     with utils.open_utf8(path, 'w') as outFile:
         outFile.write(SCRIPT_BASE)
-    utils.cfg_chown(path)
-    utils.cfg_chmod(path)

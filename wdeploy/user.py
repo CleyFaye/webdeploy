@@ -3,18 +3,34 @@
 from functools import wraps
 from os import (seteuid,
                 setegid,
+                environ,
+                getuid,
+                getgid,
                 )
-from pwd import getpwnam
-from grp import getgrnam
+from os.path import (isfile,
+                     getmtime,
+                     )
+from pwd import (getpwnam,
+                 getpwuid,
+                 )
+from grp import (getgrnam,
+                 getgruid,
+                 )
 from multiprocessing import (Process,
                              SimpleQueue,
                              )
-from wdeploy import config
+from wdeploy import (config,
+                     utils,
+                     )
 from logging import getLogger
 
 if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
 logg = getLogger(__name__)
+
+
+ORIGINAL_UID_KEY = 'WDEPLOY_ORIGINAL_UID'
+ORIGINAL_GID_KEY = 'WDEPLOY_ORIGINAL_GID'
 
 
 def as_user(userName=None,
@@ -98,3 +114,76 @@ def prefix_user():
 def prefix_group():
     """Return the name of the prefix group as configured in the project"""
     return config().PREFIX_GROUP
+
+
+def original_user():
+    """Return the name of the original user before rerunning the script wit sudo
+
+    Notes
+    -----
+    If the script was run with sudo manually, this will just return the current
+    user (root).
+    """
+    if ORIGINAL_UID_KEY in environ:
+        uid = int(environ[ORIGINAL_UID_KEY])
+    else:
+        uid = getuid()
+    return getpwuid(uid).pw_name
+
+
+def original_group():
+    """Return the name of the original group before running sudo.
+
+    Notes
+    -----
+    See original_user()
+    """
+    if ORIGINAL_GID_KEY in environ:
+        gid = int(environ[ORIGINAL_GID_KEY])
+    else:
+        gid = getgid()
+    return getgruid(gid).gr_name
+
+
+@as_user(original_user, original_group)
+def readSourceFile(sourcePath):
+    """Return the content of a source file using original user"""
+    with open(sourcePath, 'rb') as inFile:
+        return inFile.read()
+
+
+@as_user(prefix_user, prefix_group)
+def writeDestinationFile(destinationPath, content):
+    """Write a destination file using prefix user"""
+    with open(destinationPath, 'wb') as outFile:
+        outFile.write(content)
+
+
+def _getMTime(path):
+    """Return a resource mtime, or 0 if the resource doesn't exist"""
+    try:
+        return getmtime(path)
+    except OSError:
+        return 0
+
+
+@as_user(original_user, original_group)
+def getSourceMTime(sourcePath):
+    """Return a source file mtime"""
+    return _getMTime(sourcePath)
+
+
+@as_user(prefix_user, prefix_group)
+def getDestinationMTime(destinationPath):
+    """Return a destination file mtime"""
+    return _getMTime(destinationPath)
+
+
+@as_user(original_user, original_group)
+def crawlSource(path):
+    return list(utils.walkfiles(path))
+
+
+@as_user(prefix_user, prefix_group)
+def crawlDestination(path):
+    return list(utils.walkfiles(path))

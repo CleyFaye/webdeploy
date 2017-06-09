@@ -4,11 +4,15 @@
 from sys import (argv,
                  executable,
                  )
-from os import getuid
+from os import (getuid,
+                getgid,
+                environ,
+                )
 from subprocess import call
 from wdeploy import (config,
                      runTask,
                      utils,
+                     user,
                      )
 from logging import getLogger
 
@@ -36,6 +40,8 @@ def sudoMe():
                    executable,
                    argv[0],
                    ]
+        environ[user.ORIGINAL_UID_KEY] = str(getuid())
+        environ[user.ORIGINAL_GID_KEY] = str(getgid())
         call(callArg)
     except Exception:
         logg.error('sudo not found; re-run this script as root.')

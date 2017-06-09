@@ -9,10 +9,16 @@ from os.path import (join,
                      isfile,
                      getmtime,
                      )
-from shutil import copy
 from wdeploy import (task,
                      utils,
                      )
+from wdeploy.user import (readSourceFile,
+                          writeDestinationFile,
+                          getSourceMTime,
+                          getDestinationMTime,
+                          crawlSource,
+                          crawlDestination,
+                          )
 from logging import getLogger
 
 if __name__ == '__main__':
@@ -82,8 +88,9 @@ def copyfile(sourcePath,
                   destPath,
                   ),
                )
-    copy(sourcePath, destPath)
-    utils.cfg_chown(destPath)
+    writeDestinationFile(destPath,
+                         readSourceFile(sourcePath),
+                         )
     utils.cfg_chmod(destPath)
 
 
@@ -119,7 +126,7 @@ def rsync(sourceDir,
     # List used to delete stall files
     sourceFiles = []
 
-    for relativePath, fileName in utils.walkfiles(sourceDir):
+    for relativePath, fileName in crawlSource(sourceDir):
         excluded = False
         for exclude in excludeList:
             if fnmatch(fileName, exclude):
@@ -139,15 +146,16 @@ def rsync(sourceDir,
         sourceFilePath = join(sourceDir,
                               relativePath,
                               fileName)
-        if (isfile(destinationFilePath)
-            and getmtime(sourceFilePath) <= getmtime(destinationFilePath)):
+        destinationTime = getDestinationMTime(destinationFilePath)
+        sourceTime = getSourceMTime(sourceFilePath)
+        if (sourceTime <= destinationTime):
             continue
 
         copyfile(sourceFilePath,
                  destinationFilePath)
 
     if deleteStalledFiles:
-        for relativePath, fileName in utils.walkfiles(destinationDir):
+        for relativePath, fileName in crawlDestination(destinationDir):
             relativeFilePath = join(relativePath,
                                     fileName)
             if relativeFilePath in sourceFiles:

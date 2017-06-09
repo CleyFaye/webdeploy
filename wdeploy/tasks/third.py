@@ -12,6 +12,11 @@ from wdeploy import (task,
                      utils,
                      )
 from wdeploy.dependencies import extensionCheck
+from wdeploy.user import (as_user,
+                          original_user,
+                          original_group,
+                          writeDestinationFile,
+                          )
 from .css import cssProcess
 from logging import getLogger
 
@@ -155,19 +160,19 @@ def deployThird(sourceDir,
                                 )
 
 
+@as_user(original_user, original_group)
+def _jsProcess(sourcePath):
+    """Return the content of a processed JS file"""
+    args = ['-c', '-m', '--', sourcePath]
+    process = utils.pipeRun('uglifyjs', None, args)
+    return process.read()
+
+
 def updateJSFile(sourcePath,
                  destPath,
                  ):
     """Process a JS file using uglifyjs."""
-    uglifyJsPath = utils.which('uglifyjs')
-    args = [uglifyJsPath,
-            '-o', destPath,
-            '-c', '--',
-            sourcePath]
-    process = Popen(args)
-    result = process.wait()
-    if result != 0:
-        raise Exception('Error when minifying %s' % sourcePath)
+    writeDestinationFile(destPath, _jsProcess(sourcePath))
 
 
 def updateCSSFile(sourcePath,
@@ -177,6 +182,7 @@ def updateCSSFile(sourcePath,
     cssProcess(sourcePath, destPath)
 
 
+@as_user(original_user, original_group)
 def prepareFiles(name,
                  source,
                  ):

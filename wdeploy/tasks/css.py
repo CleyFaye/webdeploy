@@ -8,6 +8,12 @@ from os import (unlink,
 from wdeploy import (task,
                      utils,
                      )
+from wdeploy.user import (as_user,
+                          prefix_user,
+                          prefix_group,
+                          original_user,
+                          original_group,
+                          )
 from wdeploy.dependencies import extensionCheck
 
 if __name__ == '__main__':
@@ -50,21 +56,54 @@ def _cssProcess(sourceFile):
                        + '(tried yui-compressor, cleancss, cssmin)')
 
 
-def lessProcess(source, dest, includeDirs):
-    """Process a less file into a css file"""
+@as_user(original_user, original_group)
+def _lessProcessFromSource(source, includeDirs):
+    """Read and process a source less file
+
+    Returns
+    -------
+    string
+        The processed file content
+    """
     with utils.open_utf8(source, 'r') as inFile:
         lessProc = _lessProcess(inFile, includeDirs)
         cssProc = _cssProcess(lessProc.stdout)
-        with utils.open_utf8(dest, 'w') as outFile:
-            outFile.write(cssProc.read())
+        return cssProc.read()
+
+
+@as_user(original_user, original_group)
+def _cssProcessFromSource(source):
+    """Read and process a source css file
+
+    Returns
+    -------
+    string
+        The processed file content
+    """
+    with utils.open_utf8(source, 'r') as inFile:
+        cssProc = _cssProcess(inFile)
+        return cssProc.read()
+
+
+@as_user(prefix_user, prefix_group)
+def _cssProcessIntoDestination(dest, content):
+    """Write the content of a processed CSS file into destination."""
+    with utils.open_utf8(dest, 'w') as outFile:
+        outFile.write(content)
+
+
+def lessProcess(source, dest, includeDirs):
+    """Process a less file into a css file"""
+    _cssProcessIntoDestination(dest,
+                               _lessProcessFromSource(source, includeDirs),
+                               )
 
 
 def cssProcess(source, dest):
     """Process a css file into a minified css file"""
-    with utils.open_utf8(source, 'r') as inFile:
-        cssProc = _cssProcess(inFile)
-        with utils.open_utf8(dest, 'w') as outFile:
-            outFile.write(cssProc.read())
+    _cssProcessIntoDestination(dest,
+                               _cssProcessFromSource(source),
+                               )
 
 
 @task(sourcePathArguments=['sourceDir', 'includeDirs'],

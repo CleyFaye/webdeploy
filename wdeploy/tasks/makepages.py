@@ -1,11 +1,14 @@
 # encoding=utf-8
 """Generate static pages."""
-from os.path import (getmtime,
-                     join,
+from os.path import (join,
                      )
 from wdeploy import (task,
-                     utils,
                      )
+from wdeploy.user import (getSourceMTime,
+                          getDestinationMTime,
+                          readSourceFile,
+                          writeDestinationFile,
+                          )
 from logging import getLogger
 
 if __name__ == '__main__':
@@ -53,22 +56,20 @@ def makepages(sourceDir,
         for headerName in headerNames:
             logg.debug('Reading header: %s' % headerName)
             headerPath = join(sourceDir, '%s.html' % headerName)
-            thisHeaderTime = getmtime(headerPath)
-            if thisHeaderTime > decoratorTime:
-                decoratorTime = thisHeaderTime
-            with utils.open_utf8(headerPath, 'r') as inFile:
-                header += inFile.read()
+            content = readSourceFile(headerPath)
+            thisHeaderTime = getSourceMTime(headerPath)
+            header += content
+            decoratorTime = max(decoratorTime, thisHeaderTime)
     footer = u''
     if footerNames:
         logg.info('Reading footers for file merging')
         for footerName in footerNames:
             logg.debug('Reading footer: %s' % footerName)
             footerPath = join(sourceDir, '%s.html' % footerName)
-            thisFooterTime = getmtime(footerPath)
-            if thisFooterTime > decoratorTime:
-                decoratorTime = thisFooterTime
-            with utils.open_utf8(footerPath, 'r') as inFile:
-                footer += inFile.read()
+            content = readSourceFile(footerPath)
+            thisFooterTime = getSourceMTime(footerPath)
+            footer += content
+            decoratorTime = max(decoratorTime, thisFooterTime)
 
     logg.info('Generating merged files')
     for title, bodyFile in pagesList:
@@ -76,19 +77,16 @@ def makepages(sourceDir,
         sourcePath = join(sourceDir, '%s.html' % bodyFile)
         targetPath = join(targetDir, '%s.html' % bodyFile)
 
-        sourceTime = min(getmtime(sourcePath),
-                         decoratorTime,
-                         )
-        try:
-            targetTime = getmtime(targetPath)
-        except OSError:
-            targetTime = 0
+        content = readSourceFile(sourcePath)
+        bodyTime = getSourceMTime(sourcePath)
+        sourceTime = max(bodyTime, decoratorTime)
+        targetTime = getDestinationMTime(targetPath)
 
         if sourceTime <= targetTime:
             continue
-
-        with utils.open_utf8(targetPath, 'w') as outFile,\
-                utils.open_utf8(sourcePath, 'r') as inFile:
-            content = u'%s%s%s' % (header, inFile.read(), footer)
-            content = content.replace(u'%TITLE%', title)
-            outFile.write(content)
+        fullContent = u'%s%s%s' % (header,
+                                   content,
+                                   footer,
+                                   )
+        fullContent = fullContent.replace(u'%TITLE%', title)
+        writeDestinationFile(targetPath, fullContent)
