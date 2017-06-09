@@ -3,6 +3,7 @@ from os.path import (join,
                      isfile,
                      getmtime,
                      dirname,
+                     splitext,
                      )
 
 
@@ -98,3 +99,34 @@ def _updateMTime(fileObj):
         if dep['modifiedDate'] > selfMTime:
             selfMTime = dep['modifiedDate']
     fileObj['modifiedDate'] = selfMTime
+
+
+def extensionCheck(exts):
+    """Return a filter based on file extension for checkDependencies()
+
+    Parameters
+    ----------
+    exts : string | list(string)
+        An extension, or a list of extension, that are valid for the filter.
+        Extensions must not include the initial dot; only the extension part.
+        To accept file with no extension in their name, pass an empty string.
+
+    Returns
+    -------
+    runnable
+        A runnable suitable to be used as the validityCheck argument for
+        checkDependencies()
+    """
+    if isinstance(exts, str):
+        exts = [exts,
+                ]
+
+    def runnable(absolutePath):
+        _, pathExt = splitext(absolutePath)
+        if pathExt.startswith('.'):
+            pathExt = pathExt[1:]
+        for ext in exts:
+            if ext == pathExt:
+                return True
+        return False
+    return runnable

@@ -8,6 +8,7 @@ from os import (unlink,
 from wdeploy import (task,
                      utils,
                      )
+from wdeploy.dependencies import extensionCheck
 
 if __name__ == '__main__':
     raise Exception('This program cannot be run in DOS mode.')
@@ -30,6 +31,13 @@ def _lessProcess(sourceFile, includeDirs):
 
 def _cssProcess(sourceFile):
     """Return a css minifier process taking sourceFile as stdin"""
+    if utils.isToolPresent('yui-compressor'):
+        args = ['--type',
+                'css',
+                '--charset',
+                'utf-8',
+                ]
+        return utils.pipeRun('yui-compressor', sourceFile, args)
     if utils.isToolPresent('cleancss'):
         args = ['-e',
                 '--s1',
@@ -38,6 +46,8 @@ def _cssProcess(sourceFile):
         return utils.pipeRun('cleancss', sourceFile, args)
     if utils.isToolPresent('cssmin'):
         return utils.pipeRun('cssmin', sourceFile, [])
+    raise RuntimeError('No CSS minification facilities present!'
+                       + '(tried yui-compressor, cleancss, cssmin)')
 
 
 def lessProcess(source, dest, includeDirs):
@@ -77,11 +87,6 @@ def css(sourceDir,
     includeDirs is a list of directories included when parsing import
     directives in lessc files.
     """
-
-    def validityCheck(absolutePath):
-        _, ext = splitext(absolutePath)
-        return ext in ['.css', '.less']
-
     def dependencyCheck(absolutePath):
         with utils.open_utf8(absolutePath, 'r') as src:
             imports = [x.group('import')
@@ -103,12 +108,13 @@ def css(sourceDir,
         else:
             cssProcess(absoluteSource, absoluteDest)
 
-    outputFiles = utils.checkDependencies(sourceDir,
-                                          includeDirs,
-                                          validityCheck,
-                                          dependencyCheck,
-                                          outputCB,
-                                          updateCB,
+    outputFiles = utils.checkDependencies(baseDir=sourceDir,
+                                          includeDirs=includeDirs,
+                                          localInclude=True,
+                                          validityCheck=extensionCheck([]),
+                                          dependencyCheck=dependencyCheck,
+                                          outputCB=outputCB,
+                                          updateCB=updateCB,
                                           )
     if removeStale:
         for candidateRelativePath, _ in utils.walkfiles(destinationDir):

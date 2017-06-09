@@ -2,8 +2,7 @@
 """Deploy third-party files"""
 import json
 from os import listdir
-from os.path import (getmtime,
-                     join,
+from os.path import (join,
                      isdir,
                      splitext,
                      )
@@ -12,6 +11,8 @@ from subprocess import Popen
 from wdeploy import (task,
                      utils,
                      )
+from wdeploy.dependencies import extensionCheck
+from .css import cssProcess
 from logging import getLogger
 
 if __name__ == '__main__':
@@ -78,6 +79,33 @@ def third(listDir,
                         )
 
 
+def _outputPathHandlerFactory(outputDir,
+                              prefix,
+                              ):
+    """Create an outputCB handler for checkDependencies().
+
+    Parameters
+    ----------
+    outputDir : string
+        Base output directory
+    prefix : string
+        Module specific prefix, appended to outputDir
+
+
+    Returns
+    -------
+    runnable
+        A runnable suitable to be used as the outputCB argument of
+        checkDependencies().
+    """
+    def runnable(relativePath):
+        return join(outputDir,
+                    prefix,
+                    relativePath,
+                    )
+    return runnable
+
+
 def deployThird(sourceDir,
                 prefix,
                 files,
@@ -102,68 +130,35 @@ def deployThird(sourceDir,
         directory.
     """
     if 'js' in files:
-        handleFiles(sourceDir,
-                    jsDir,
-                    prefix,
-                    files['js'],
-                    uglifyJS,
-                    )
+        utils.checkDependencies(baseDir=sourceDir,
+                                includeDirs=None,
+                                localInclude=False,
+                                validityCheck=extensionCheck('js'),
+                                dependencyCheck=None,
+                                outputCB=_outputPathHandlerFactory(jsDir,
+                                                                   prefix,
+                                                                   ),
+                                updateCB=updateJSFile,
+                                filesList=files['js'],
+                                )
     if 'css' in files:
-        handleFiles(sourceDir,
-                    cssDir,
-                    prefix,
-                    files['css'],
-                    cssmin,
-                    )
+        utils.checkDependencies(baseDir=sourceDir,
+                                includeDirs=None,
+                                localInclude=False,
+                                validityCheck=extensionCheck('css'),
+                                dependencyCheck=None,
+                                outputCB=_outputPathHandlerFactory(cssDir,
+                                                                   prefix,
+                                                                   ),
+                                updateCB=updateCSSFile,
+                                filesList=files['css'],
+                                )
 
 
-def handleFiles(sourceDir, destDir, prefix, files, handler):
-    """Process a list of files.
-
-    Parameters
-    ----------
-    sourceDir : string
-        The source path, where files can be found
-    destDir : string
-        The destination path, where files will be copied/updated
-    prefix : string
-        The dependency prefix. All files will be copied using this prefix as a
-        new subdirectory
-    files : list(string)
-        List of files, relative to sourceDir
-    handler : callable
-        Callable doing the actual copy work. Called with two arguments: the full
-        path to the source, and the full path to the destination.
-
-
-    Notes
-    -----
-    Will only update newer files, and chmod/chown them accordingly.
-    """
-    for fileName in files:
-        destName = files[fileName]
-        destPath = join(destDir,
-                        prefix,
-                        destName)
-        srcPath = join(sourceDir,
-                       fileName)
-        sourceTime = getmtime(srcPath)
-        try:
-            destTime = getmtime(destPath)
-        except OSError:
-            destTime = 0
-        if sourceTime <= destTime:
-            continue
-        utils.makeParentPath(destPath)
-        handler(srcPath, destPath)
-        utils.cfg_chown(destPath)
-        utils.cfg_chmod(destPath)
-
-
-def uglifyJS(sourcePath,
-             destPath,
-             ):
-    """Uglify a JS file using uglifyjs."""
+def updateJSFile(sourcePath,
+                 destPath,
+                 ):
+    """Process a JS file using uglifyjs."""
     uglifyJsPath = utils.which('uglifyjs')
     args = [uglifyJsPath,
             '-o', destPath,
@@ -175,18 +170,11 @@ def uglifyJS(sourcePath,
         raise Exception('Error when minifying %s' % sourcePath)
 
 
-def cssmin(sourcePath,
-           destPath,
-           ):
-    """Minify a CSS file using yui-compressor."""
-    toolPath = utils.which('yui-compressor')
-    args = [toolPath,
-            '-o', destPath,
-            sourcePath]
-    process = Popen(args)
-    result = process.wait()
-    if result != 0:
-        raise Exception('Error when minifying %s' % sourcePath)
+def updateCSSFile(sourcePath,
+                  destPath,
+                  ):
+    """Minify a CSS file."""
+    cssProcess(sourcePath, destPath)
 
 
 def prepareFiles(name,

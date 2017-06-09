@@ -291,6 +291,7 @@ def checkDependencies(baseDir,
                       dependencyCheck,
                       outputCB,
                       updateCB,
+                      filesList=None,
                       ):
     """Crawl a directory to find updated files.
 
@@ -326,6 +327,9 @@ def checkDependencies(baseDir,
         source file (in baseDir) and the absolute file name of the destination
         file (as returned by outputCB).
         This runnable is only called when a file need updating.
+    filesList : list(string) (optional)
+        A list of relative path to crawl from the source directory. If not
+        provided, all files are checked.
 
     Returns
     -------
@@ -333,14 +337,18 @@ def checkDependencies(baseDir,
         Return the list of all files that were checked by this call. This list
         is made of absolute path.
     """
-    sourceFilesPath = walkfiles(baseDir)
-    allFiles = {x[0]: {'modifiedDate': None,
-                       'relativePath': x[0],
-                       'fullPath': join(baseDir, x[0]),
+    if filesList is None:
+        sourceFilesPath = walkfiles(baseDir)
+        filesList = [join(x[0], x[1])
+                     for x in sourceFilesPath
+                     ]
+    allFiles = {x: {'modifiedDate': None,
+                       'relativePath': x,
+                       'fullPath': join(baseDir, x),
                        'deps': [],
                        }
-                for x in sourceFilesPath
-                if validityCheck(join(baseDir, x[0]))
+                for x in filesList
+                if validityCheck(join(baseDir, x))
                 }
     dependencyFiles = {}
 
@@ -363,6 +371,7 @@ def checkDependencies(baseDir,
             updateCB(fileObj['fullPath'],
                      outputPath,
                      )
+    return output
 
 
 def pipeRun(binaryName,
