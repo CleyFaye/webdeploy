@@ -58,7 +58,7 @@ def makepages(sourceDir,
             headerPath = join(sourceDir, '%s.html' % headerName)
             content = readSourceFile(headerPath)
             thisHeaderTime = getSourceMTime(headerPath)
-            header += content
+            header += content.decode()
             decoratorTime = max(decoratorTime, thisHeaderTime)
     footer = u''
     if footerNames:
@@ -68,7 +68,7 @@ def makepages(sourceDir,
             footerPath = join(sourceDir, '%s.html' % footerName)
             content = readSourceFile(footerPath)
             thisFooterTime = getSourceMTime(footerPath)
-            footer += content
+            footer += content.decode()
             decoratorTime = max(decoratorTime, thisFooterTime)
 
     logg.info('Generating merged files')
@@ -77,7 +77,7 @@ def makepages(sourceDir,
         sourcePath = join(sourceDir, '%s.html' % bodyFile)
         targetPath = join(targetDir, '%s.html' % bodyFile)
 
-        content = readSourceFile(sourcePath)
+        content = readSourceFile(sourcePath).decode()
         bodyTime = getSourceMTime(sourcePath)
         sourceTime = max(bodyTime, decoratorTime)
         targetTime = getDestinationMTime(targetPath)
@@ -89,4 +89,4 @@ def makepages(sourceDir,
                                    footer,
                                    )
         fullContent = fullContent.replace(u'%TITLE%', title)
-        writeDestinationFile(targetPath, fullContent)
+        writeDestinationFile(targetPath, fullContent.encode())

@@ -7,14 +7,13 @@ from os import (seteuid,
                 getuid,
                 getgid,
                 )
-from os.path import (isfile,
-                     getmtime,
+from os.path import (getmtime,
                      )
 from pwd import (getpwnam,
                  getpwuid,
                  )
 from grp import (getgrnam,
-                 getgruid,
+                 getgrgid,
                  )
 from multiprocessing import (Process,
                              SimpleQueue,
@@ -69,13 +68,6 @@ def as_user(userName=None,
             def user_switched_process(*args, **kwargs):
                 """Function called in subprocess."""
                 logg.debug('Running function as another user')
-                if userName:
-                    if isinstance(userName, str):
-                        realUserName = userName
-                    else:
-                        realUserName = userName()
-                    logg.debug('User: %s' % realUserName)
-                    seteuid(getpwnam(realUserName).pw_uid)
                 if groupName:
                     if isinstance(groupName, str):
                         realGroupName = groupName
@@ -83,6 +75,13 @@ def as_user(userName=None,
                         realGroupName = groupName()
                     logg.debug('Group: %s' % realGroupName)
                     setegid(getgrnam(realGroupName).gr_gid)
+                if userName:
+                    if isinstance(userName, str):
+                        realUserName = userName
+                    else:
+                        realUserName = userName()
+                    logg.debug('User: %s' % realUserName)
+                    seteuid(getpwnam(realUserName).pw_uid)
                 try:
                     result = function(*args, **kwargs)
                     resultQueue.put(result)
@@ -142,7 +141,7 @@ def original_group():
         gid = int(environ[ORIGINAL_GID_KEY])
     else:
         gid = getgid()
-    return getgruid(gid).gr_name
+    return getgrgid(gid).gr_name
 
 
 @as_user(original_user, original_group)
@@ -155,6 +154,7 @@ def readSourceFile(sourcePath):
 @as_user(prefix_user, prefix_group)
 def writeDestinationFile(destinationPath, content):
     """Write a destination file using prefix user"""
+    utils.makeParentPath(destinationPath)
     with open(destinationPath, 'wb') as outFile:
         outFile.write(content)
 

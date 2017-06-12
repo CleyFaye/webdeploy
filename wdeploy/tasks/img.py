@@ -62,17 +62,17 @@ def _imgProcessFromSource(source):
     """
     _, ext = splitext(source)
     ext = ext.lower()
-    if ext == 'png':
+    if ext == '.png':
         method = _pngProcess
-    elif ext == 'jpg':
+    elif ext == '.jpg':
         method = _jpgProcess
-    elif ext == 'svg':
+    elif ext == '.svg':
         method = _svgProcess
     else:
         raise RuntimeError('Unknown image extension: %s' % ext)
-    with utils.open(source, 'rb') as inFile:
+    with open(source, 'rb') as inFile:
         proc = method(inFile)
-        return proc.read()
+        return proc.stdout.read()
 
 
 def imgProcess(source, dest):
@@ -115,7 +115,9 @@ def img(sourceDir,
                                           updateCB=updateCB,
                                           )
     if removeStale:
-        for candidateRelativePath, _ in utils.walkfiles(destinationDir):
-            candidateFullPath = join(destinationDir, candidateRelativePath)
+        for candidateRelativePath, name in utils.walkfiles(destinationDir):
+            candidateFullPath = join(destinationDir,
+                                     candidateRelativePath,
+                                     name)
             if candidateFullPath not in outputFiles:
                 unlink(candidateFullPath)

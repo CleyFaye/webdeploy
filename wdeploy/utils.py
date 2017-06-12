@@ -17,12 +17,13 @@ from os.path import (isdir,
                      pathsep,
                      relpath,
                      dirname,
-                     getmtime,
                      )
 import pwd
 from wdeploy import (config,
                      dependencies,
                      )
+from wdeploy.user import (getDestinationMTime,
+                          )
 from logging import getLogger
 
 if __name__ == '__main__':
@@ -343,16 +344,17 @@ def checkDependencies(baseDir,
                      for x in sourceFilesPath
                      ]
     allFiles = {x: {'modifiedDate': None,
-                       'relativePath': x,
-                       'fullPath': join(baseDir, x),
-                       'deps': [],
-                       }
+                    'relativePath': x,
+                    'fullPath': join(baseDir, x),
+                    'deps': [],
+                    }
                 for x in filesList
                 if validityCheck(join(baseDir, x))
                 }
     dependencyFiles = {}
 
-    for fileObj in allFiles:
+    for fileObjKey in allFiles:
+        fileObj = allFiles[fileObjKey]
         dependencies._fillDeps(fileObj,
                                allFiles,
                                dependencyFiles,
@@ -362,11 +364,12 @@ def checkDependencies(baseDir,
                                )
 
     output = []
-    for fileObj in allFiles:
+    for fileObjKey in allFiles:
+        fileObj = allFiles[fileObjKey]
         outputPath = outputCB(fileObj['relativePath'])
         output.append(outputPath)
         dependencies._updateMTime(fileObj)
-        outputMDate = getmtime(outputPath)
+        outputMDate = getDestinationMTime(outputPath)
         if outputMDate <= fileObj['modifiedDate']:
             updateCB(fileObj['fullPath'],
                      outputPath,

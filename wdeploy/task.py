@@ -12,6 +12,41 @@ if __name__ == '__main__':
 logg = getLogger(__name__)
 
 
+def _handlePathArgs(args,
+                    filterList,
+                    baseDir,
+                    ):
+    """Replace arguments in a list of function arguments.
+
+    Parameters
+    ----------
+    args : dict
+        Dictionary of arguments to be passed as kwargs
+    filterList : list(string)
+        list of keys in args to add a prefix to
+    baseDir : string
+        prefix to add to args values whose keys matches filterList
+    """
+    if not filterList:
+        return
+    for argName in filterList:
+        if (argName not in args
+            or args[argName] is None):
+            continue
+        if isinstance(args[argName],
+                      str,
+                      ):
+            args[argName] = join(baseDir,
+                                 args[argName],
+                                 )
+        else:
+            args[argName] = [join(baseDir,
+                                  x,
+                                  )
+                             for x in args[argName]
+                             ]
+
+
 def task(sourcePathArguments=None,
          destinationPathArguments=None,
          ):
@@ -48,33 +83,14 @@ def task(sourcePathArguments=None,
 
         def processTask(**kwargs):
             args = kwargs.copy()
-            if sourcePathArguments:
-                for argName in sourcePathArguments:
-                    if isinstance(args[argName],
-                                  str):
-                        args[argName] = join(config().ROOT,
-                                             args[argName],
-                                             )
-                    else:
-                        args[argName] = [join(config().ROOT,
-                                              x,
-                                              )
-                                         for x in args[argName]
-                                         ]
-            if destinationPathArguments:
-                for argName in destinationPathArguments:
-                    if isinstance(args[argName],
-                                  str,
-                                  ):
-                        args[argName] = join(config().PREFIX,
-                                             args[argName],
-                                             )
-                    else:
-                        args[argName] = [join(config().PREFIX,
-                                              x,
-                                              )
-                                         for x in args[argName]
-                                         ]
+            _handlePathArgs(args,
+                            sourcePathArguments,
+                            config().ROOT,
+                            )
+            _handlePathArgs(args,
+                            destinationPathArguments,
+                            config().PREFIX,
+                            )
             func(**args)
         myself.taskList[func.__name__] = processTask
         logg.debug('Registering task %s'
@@ -96,9 +112,11 @@ def runTask(taskDesc):
     """
     taskName = taskDesc['name']
     taskArgs = taskDesc['args'].copy()
-    logg.info('Running task "%s" (%s)'
-              % (taskName,
-                 taskArgs,
-                 ),
+    if 'desc' in taskDesc:
+        taskDescription = taskDesc['desc']
+    else:
+        taskDescription = taskName
+    logg.info('Running task "%s"'
+              % taskDescription
               )
     task.taskList[taskName](**taskArgs)

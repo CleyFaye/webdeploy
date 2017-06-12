@@ -9,10 +9,9 @@ from wdeploy import (task,
                      utils,
                      )
 from wdeploy.user import (as_user,
-                          prefix_user,
-                          prefix_group,
                           original_user,
                           original_group,
+                          writeDestinationFile,
                           )
 from wdeploy.dependencies import extensionCheck
 
@@ -82,28 +81,21 @@ def _cssProcessFromSource(source):
     """
     with utils.open_utf8(source, 'r') as inFile:
         cssProc = _cssProcess(inFile)
-        return cssProc.read()
-
-
-@as_user(prefix_user, prefix_group)
-def _cssProcessIntoDestination(dest, content):
-    """Write the content of a processed CSS file into destination."""
-    with utils.open_utf8(dest, 'w') as outFile:
-        outFile.write(content)
+        return cssProc.stdout.read()
 
 
 def lessProcess(source, dest, includeDirs):
     """Process a less file into a css file"""
-    _cssProcessIntoDestination(dest,
-                               _lessProcessFromSource(source, includeDirs),
-                               )
+    writeDestinationFile(dest,
+                         _lessProcessFromSource(source, includeDirs),
+                         )
 
 
 def cssProcess(source, dest):
     """Process a css file into a minified css file"""
-    _cssProcessIntoDestination(dest,
-                               _cssProcessFromSource(source),
-                               )
+    writeDestinationFile(dest,
+                         _cssProcessFromSource(source),
+                         )
 
 
 @task(sourcePathArguments=['sourceDir', 'includeDirs'],
@@ -157,7 +149,10 @@ def css(sourceDir,
                                           updateCB=updateCB,
                                           )
     if removeStale:
-        for candidateRelativePath, _ in utils.walkfiles(destinationDir):
-            candidateFullPath = join(destinationDir, candidateRelativePath)
+        for candidateRelativePath, name in utils.walkfiles(destinationDir):
+            candidateFullPath = join(destinationDir,
+                                     candidateRelativePath,
+                                     name,
+                                     )
             if candidateFullPath not in outputFiles:
                 unlink(candidateFullPath)

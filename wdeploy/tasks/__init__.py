@@ -4,6 +4,8 @@ from .apachecfg import apachecfg
 from .cgi import cgi
 from .create_symlink import create_symlink
 from .css import css
+from .img import img
+from .js import js
 from .makefile import makefile
 from .makepages import makepages
 from .mkdir import mkdir

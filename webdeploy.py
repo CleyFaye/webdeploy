@@ -24,7 +24,7 @@ def run():
     for taskId, task in enumerate(config().TASKS):
         logg.info('Running task %s: %s'
                   % (taskId + 1,
-                     task[0],
+                     task['name'],
                      ),
                   )
         runTask(task)

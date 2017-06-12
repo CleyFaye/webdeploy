@@ -25,7 +25,7 @@ DIFFERENT_LINK_EXIST_MSG = ('Symbolic link "%s" already exist but point to a '
                             )
 
 
-@task(destinationPathArguments='source')
+@task(destinationPathArguments=['source'])
 def create_symlink(source, destination):
     """Create a symbolic link (if it doesn't exist already) outside of PREFIX.
 

@@ -19,6 +19,9 @@ if __name__ == '__main__':
 
 def _jsProcess(sourceFile):
     """Return a JS minifier process returning the minified output as stdout"""
+    if utils.isToolPresent('closure-compiler.sh'):
+        args = []
+        return utils.pipeRun('closure-compiler.sh', sourceFile, args)
     if utils.isToolPresent('uglifyjs'):
         args = ['-c',
                 '-m',
@@ -32,7 +35,8 @@ def _jsProcess(sourceFile):
                 ]
         return utils.pipeRun('yui-compressor', sourceFile, args)
     raise RuntimeError('No JS minification facilities present!'
-                       + '(tried uglifyjs, yui-compressor)')
+                       + '(tried closure-compiler.sh, uglifyjs, '
+                       + 'yui-compressor)')
 
 
 @as_user(original_user, original_group)
@@ -46,13 +50,13 @@ def _jsProcessFromSource(source):
     """
     with utils.open_utf8(source, 'r') as inFile:
         jsProc = _jsProcess(inFile)
-        return jsProc.read()
+        return jsProc.stdout.read()
 
 
 def jsProcess(source, dest):
     """Process a css file into a minified css file"""
     writeDestinationFile(dest,
-                         _jsProcess(source),
+                         _jsProcessFromSource(source),
                          )
 
 
@@ -86,7 +90,9 @@ def js(sourceDir,
                                           updateCB=updateCB,
                                           )
     if removeStale:
-        for candidateRelativePath, _ in utils.walkfiles(destinationDir):
-            candidateFullPath = join(destinationDir, candidateRelativePath)
+        for candidateRelativePath, name in utils.walkfiles(destinationDir):
+            candidateFullPath = join(destinationDir,
+                                     candidateRelativePath,
+                                     name)
             if candidateFullPath not in outputFiles:
                 unlink(candidateFullPath)

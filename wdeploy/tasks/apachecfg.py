@@ -42,7 +42,10 @@ def apachecfg(name, apacheConfig):
     in the appropriate apache configuration directory is a good idea.
     """
     cgiName = 'cgi/wsgi.py'
-    runTask(('Create WSGI script', 'cgi', cgiName))
+    runTask({'name': 'cgi',
+             'desc': 'Create WSGI script',
+             'args': {'path': cgiName},
+             })
     fullCGIPath = join(config().PREFIX, cgiName)
     apacheFullPath = join(config().PREFIX, name)
     apacheFullDir = dirname(apacheFullPath)
