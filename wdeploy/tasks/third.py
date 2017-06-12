@@ -15,9 +15,9 @@ from wdeploy.dependencies import extensionCheck
 from wdeploy.user import (as_user,
                           original_user,
                           original_group,
-                          writeDestinationFile,
                           )
 from .css import cssProcess
+from .js import jsProcess
 from logging import getLogger
 
 if __name__ == '__main__':
@@ -160,19 +160,11 @@ def deployThird(sourceDir,
                                 )
 
 
-@as_user(original_user, original_group)
-def _jsProcess(sourcePath):
-    """Return the content of a processed JS file"""
-    args = ['-c', '-m', '--', sourcePath]
-    process = utils.pipeRun('uglifyjs', None, args)
-    return process.read()
-
-
 def updateJSFile(sourcePath,
                  destPath,
                  ):
     """Process a JS file using uglifyjs."""
-    writeDestinationFile(destPath, _jsProcess(sourcePath))
+    jsProcess(sourcePath, destPath)
 
 
 def updateCSSFile(sourcePath,
