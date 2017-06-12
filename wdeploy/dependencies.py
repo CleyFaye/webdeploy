@@ -46,6 +46,8 @@ def _fillDeps(fileObject,
               dependencyCheck,
               ):
     """Convert a list of string representing the deps to file objects"""
+    if not dependencyCheck:
+        return
     dependencies = dependencyCheck(fileObject['fullPath'])
     if not dependencies:
         return

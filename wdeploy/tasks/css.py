@@ -113,7 +113,7 @@ def css(sourceDir,
         destinationDir,
         includeDirs=None,
         removeStale=True):
-    """Process all css/less files drom sourceDir.
+    """Process all css/less files from sourceDir.
 
     This task will look for changes in the source directory, and process/copy
     files in the destination directory.
