@@ -41,7 +41,6 @@ def _getRequirements(sourceDir):
                     'bin',
                     'pip',
                     )
-    print('FP:%s#' % fullPath)
     process = pipeRun(join(sourceDir,
                            'bin',
                            'pip',
