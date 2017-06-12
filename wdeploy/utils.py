@@ -17,6 +17,7 @@ from os.path import (isdir,
                      pathsep,
                      relpath,
                      dirname,
+                     isabs,
                      )
 import pwd
 from wdeploy import (config,
@@ -405,7 +406,10 @@ def pipeRun(binaryName,
     Since stdout is using a pipe in the child process, caller is responsible of
     reading from it. If not read, the child process might block when writing.
     """
-    args = [which(binaryName)] + args
+    if isabs(binaryName):
+        args = [binaryName] + args
+    else:
+        args = [which(binaryName)] + args
     result = subprocess.Popen(args,
                               stdin=inputStream or subprocess.DEVNULL,
                               stdout=subprocess.PIPE,

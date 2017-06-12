@@ -12,3 +12,4 @@ from .mkdir import mkdir
 from .service import service
 from .synctree import synctree
 from .third import third
+from .virtualenv import virtualenv
