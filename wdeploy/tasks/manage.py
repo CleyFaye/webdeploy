@@ -41,7 +41,7 @@ def _runAsOriginal(virtualEnv, projectLocation, args):
     _runManage(virtualEnv, projectLocation, args)
 
 
-@task()
+@task(pathArguments=['virtualEnv', 'projectLocation'])
 def manage(virtualEnv,
            projectLocation,
            args,

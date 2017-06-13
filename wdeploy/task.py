@@ -39,19 +39,28 @@ def _handlePathArgs(args,
                       str,
                       ):
             expandedPath = expanduser(args[argName])
-            args[argName] = join(baseDir,
-                                 expandedPath,
-                                 )
+            if baseDir:
+                args[argName] = join(baseDir,
+                                     expandedPath,
+                                     )
+            else:
+                args[argName] = expandedPath
         else:
-            args[argName] = [join(baseDir,
-                                  expanduser(x),
-                                  )
-                             for x in args[argName]
-                             ]
+            if baseDir:
+                args[argName] = [join(baseDir,
+                                      expanduser(x),
+                                      )
+                                 for x in args[argName]
+                                 ]
+            else:
+                args[argName] = [expanduser(x)
+                                 for x in args[argName]
+                                 ]
 
 
 def task(sourcePathArguments=None,
          destinationPathArguments=None,
+         pathArguments=None,
          ):
     """Returns a decorator for tasks.
 
@@ -93,6 +102,10 @@ def task(sourcePathArguments=None,
             _handlePathArgs(args,
                             destinationPathArguments,
                             config().PREFIX,
+                            )
+            _handlePathArgs(args,
+                            pathArguments,
+                            None,
                             )
             func(**args)
         myself.taskList[func.__name__] = processTask
