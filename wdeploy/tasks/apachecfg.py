@@ -16,6 +16,84 @@ if __name__ == '__main__':
 logg = getLogger(__name__)
 
 
+def _writeRedirect(outFile,
+                   hostName,
+                   ):
+    """Write a redirect from HTTP to HTTPS"""
+    outFile.write("""<VirtualHost *:80>
+                  ServerName %s
+                  <IfModule mod_rewrite.c>
+                  RewriteEngine On
+                  RewriteCond %%{HTTPS} off
+                  RewriteRule (.*) https://%%{HTTP_HOST}%%{REQUEST_URI}
+                  <Else>
+                  Redirect permanent / https://%s/
+                  </IfModule>
+                  </VirtualHost>\n""" % (hostName, hostName))
+
+
+def _writeVHost(outFile,
+                useTLS,
+                hostName,
+                logLevel,
+                fullCGIPath,
+                apacheConfig,
+                ):
+    """Write a vhost entry."""
+    # VHost header
+    if useTLS:
+        outFile.write('<VirtualHost *:443>\n')
+    else:
+        outFile.write('<VirtualHost *:80>\n')
+    outFile.write('ServerName "%s"\n' % hostName)
+    # Log Level
+    outFile.write('LogLevel %s\n' % logLevel)
+    # WSGI Script
+    pythonPath = join(config().PREFIX,
+                      apacheConfig['venv'],
+                      )
+    appPath = join(config().PREFIX,
+                   apacheConfig['app'],
+                   )
+    outFile.write('WSGIDaemonProcess %s python-home=%s python-path=%s\n' %
+                  (config().PROJECT_NAME,
+                   pythonPath,
+                   appPath,
+                   ),
+                  )
+    outFile.write('WSGIProcessGroup %s\n' %
+                  (config().PROJECT_NAME,
+                   ),
+                  )
+    outFile.write('WSGIScriptAlias / %s %s\n'
+                  % (fullCGIPath,
+                     config().PROJECT_NAME,
+                     ),
+                  )
+    apacheGrantAccess(outFile, 'cgi')
+    # Aliases
+    if 'alias' in apacheConfig and apacheConfig['alias']:
+        for alias in apacheConfig['alias']:
+            outFile.write('Alias /%s/ %s/\n' %
+                          (alias[0], join(config().PREFIX, alias[1])))
+            apacheGrantAccess(outFile, alias[1])
+    # TLS
+    if useTLS:
+        outFile.write('SSLEngine On\n')
+        outFile.write('SSLCertificateFile %s\n' %
+                      apacheConfig['tls'][1])
+        outFile.write('SSLCertificateKeyFile %s\n' %
+                      apacheConfig['tls'][0])
+        if len(apacheConfig['tls']) == 3:
+            outFile.write('SSLCACertificateFile %s\n' %
+                          apacheConfig['tls'][2])
+        outFile.write('SSLVerifyClient None\n')
+        outFile.write('Header always set Strict-Transport-Security '
+                      + '"max-age=63072001; includeSubdomains;')
+    # VHost footer
+    outFile.write('</VirtualHost>\n')
+
+
 @task()
 def apachecfg(name, apacheConfig):
     """Prepare the application to run on an apache2 server.
@@ -27,7 +105,8 @@ def apachecfg(name, apacheConfig):
 
     apacheConfig is a dictionary that can contain:
     - alias: an array of tuple for aliasing URL to directories on the FS
-    - cgi: a list of path to append to the python execution path
+    - venv: the path to the VENV (relative to PREFIX)
+    - app: the path to the app (relative to PREFIX)
     - loglevel: the apache log level for this virtual host. If not provided,
                 default to 'info'.
     - hostname: the name of this vhost.
@@ -56,9 +135,6 @@ def apachecfg(name, apacheConfig):
     else:
         hostName = 'localhost'
 
-    pythonPath = ':'.join([join(config().PREFIX, a).replace(' ', '\\ ')
-                           for a in apacheConfig['cgi']])
-
     if 'loglevel' in apacheConfig and apacheConfig['loglevel']:
         logLevel = apacheConfig['loglevel']
     else:
@@ -66,53 +142,19 @@ def apachecfg(name, apacheConfig):
 
     with utils.open_utf8(apacheFullPath, 'w') as outFile:
         if 'tls' in apacheConfig and apacheConfig['tls']:
-            configWithTLS = [False, True]
+            _writeRedirect(outFile,
+                           hostName,
+                           )
+            useTLS = True
         else:
-            configWithTLS = [False]
-        for useTLS in configWithTLS:
-            # VHost header
-            if useTLS:
-                outFile.write('<VirtualHost *:443>\n')
-                processGroupSuffix = '_tls'
-            else:
-                outFile.write('<VirtualHost *:80>\n')
-                processGroupSuffix = ''
-            outFile.write('ServerName "%s"\n' % hostName)
-            # Log Level
-            outFile.write('LogLevel %s\n' % logLevel)
-            # WSGI Script
-            outFile.write('WSGIDaemonProcess %s%s python-path=%s\n' %
-                          (config().PROJECT_NAME,
-                           processGroupSuffix,
-                           pythonPath,
-                           ),
-                          )
-            outFile.write('WSGIProcessGroup %s%s\n' %
-                          (config().PROJECT_NAME,
-                           processGroupSuffix,
-                           ),
-                          )
-            outFile.write('WSGIScriptAlias / %s\n' % fullCGIPath)
-            apacheGrantAccess(outFile, 'cgi')
-            # Aliases
-            if 'alias' in apacheConfig and apacheConfig['alias']:
-                for alias in apacheConfig['alias']:
-                    outFile.write('Alias /%s/ %s/\n' %
-                                  (alias[0], join(config().PREFIX, alias[1])))
-                    apacheGrantAccess(outFile, alias[1])
-            # TLS
-            if useTLS:
-                outFile.write('SSLEngine On\n')
-                outFile.write('SSLCertificateFile %s\n' %
-                              apacheConfig['tls'][1])
-                outFile.write('SSLCertificateKeyFile %s\n' %
-                              apacheConfig['tls'][0])
-                if len(apacheConfig['tls']) == 3:
-                    outFile.write('SSLCACertificateFile %s\n' %
-                                  apacheConfig['tls'][2])
-                outFile.write('SSLVerifyClient None\n')
-            # VHost footer
-            outFile.write('</VirtualHost>\n')
+            useTLS = False
+        _writeVHost(outFile,
+                    useTLS,
+                    hostName,
+                    logLevel,
+                    fullCGIPath,
+                    apacheConfig,
+                    )
     utils.cfg_chown(apacheFullPath)
     utils.cfg_chmod(apacheFullPath)
 
