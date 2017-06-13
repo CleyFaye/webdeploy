@@ -65,7 +65,7 @@ def _writeVHost(outFile,
                   (config().PROJECT_NAME,
                    ),
                   )
-    outFile.write('WSGIScriptAlias / %s %s\n'
+    outFile.write('WSGIScriptAlias / %s process-group=%s\n'
                   % (fullCGIPath,
                      config().PROJECT_NAME,
                      ),
