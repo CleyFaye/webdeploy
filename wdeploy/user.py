@@ -95,7 +95,6 @@ def as_user(userName=None,
                                  kwargs=kwargs,
                                  )
             subprocess.start()
-            subprocess.join()
             result = resultQueue.get()
             exception = resultQueue.get()
             if exception:
