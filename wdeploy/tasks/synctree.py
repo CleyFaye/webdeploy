@@ -6,9 +6,7 @@ from os import (remove,
                 walk,
                 )
 from os.path import join
-from wdeploy import (task,
-                     utils,
-                     )
+from wdeploy import task
 from wdeploy.user import (readSourceFile,
                           writeDestinationFile,
                           getSourceMTime,
@@ -117,7 +115,6 @@ def rsync(sourceDir,
     If deleteStalledFiles is True, empty directories in the destination path
     will also be removed.
     """
-    utils.real_mkdir(destinationDir)
 
     # List used to delete stall files
     sourceFiles = []
