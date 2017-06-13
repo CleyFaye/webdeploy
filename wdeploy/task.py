@@ -3,7 +3,9 @@
 
 Decorators and functions required to define and run tasks.
 """
-from os.path import join
+from os.path import (join,
+                     expanduser,
+                     )
 from wdeploy import config
 from logging import getLogger
 
@@ -36,12 +38,13 @@ def _handlePathArgs(args,
         if isinstance(args[argName],
                       str,
                       ):
+            expandedPath = expanduser(args[argName])
             args[argName] = join(baseDir,
-                                 args[argName],
+                                 expandedPath,
                                  )
         else:
             args[argName] = [join(baseDir,
-                                  x,
+                                  expanduser(x),
                                   )
                              for x in args[argName]
                              ]
