@@ -81,7 +81,9 @@ def as_user(userName=None,
                     else:
                         realUserName = userName()
                     logg.debug('User: %s' % realUserName)
-                    seteuid(getpwnam(realUserName).pw_uid)
+                    userDef = getpwnam(realUserName)
+                    seteuid(userDef.pw_uid)
+                    environ['HOME'] = userDef.pw_dir
                 try:
                     result = function(*args, **kwargs)
                     resultQueue.put(result)
