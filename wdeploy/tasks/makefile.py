@@ -68,6 +68,7 @@ def makefile(script, target, args, runAs):
         following : 'root', 'original', 'prefix'. You should make sure that the
         requested account have access to the actual Makefile and its directory.
     """
+    runAs = runAs.lower()
     if runAs == 'root':
         func = _runMakefile
     elif runAs == 'prefix':
