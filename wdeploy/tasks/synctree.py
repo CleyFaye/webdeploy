@@ -88,7 +88,6 @@ def copyfile(sourcePath,
     writeDestinationFile(destPath,
                          readSourceFile(sourcePath),
                          )
-    utils.cfg_chmod(destPath)
 
 
 def rsync(sourceDir,
@@ -139,7 +138,6 @@ def rsync(sourceDir,
         destinationFilePath = join(destinationDir,
                                    relativePath,
                                    fileName)
-        utils.makeParentPath(destinationFilePath)
 
         sourceFilePath = join(sourceDir,
                               relativePath,
