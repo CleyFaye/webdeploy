@@ -1,6 +1,7 @@
 # encoding=utf-8
 """Create WSGI CGI scripts for Django applications."""
 from os.path import isfile
+from os import utime
 from wdeploy import (task,
                      utils,
                      )
@@ -34,7 +35,8 @@ def cgi(path):
     If the file already exist, it is not replaced or erased.
     """
     if isfile(path):
-        logg.info('WSGI script already exists; not overwriting')
+        logg.info('WSGI script already exists; touching')
+        utime(path)
         return
     logg.info('Creating WSGI script in "%s"' % path)
     utils.makeParentPath(path)
