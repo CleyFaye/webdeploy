@@ -37,10 +37,6 @@ def _createVirtualEnvironment(outputDir,
 
 @as_user(original_user, original_group)
 def _getRequirements(sourceDir):
-    fullPath = join(sourceDir,
-                    'bin',
-                    'pip',
-                    )
     process = pipeRun(join(sourceDir,
                            'bin',
                            'pip',
@@ -67,7 +63,9 @@ def _installRequirements(outputDir):
     call(args)
 
 
-@task(destinationPathArguments=['outputDir'])
+@task(sourcePathArguments=['sourceDir'],
+      destinationPathArguments=['outputDir'],
+      )
 def virtualenv(sourceDir,
                outputDir,
                pythonBin,
