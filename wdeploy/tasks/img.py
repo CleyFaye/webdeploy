@@ -73,7 +73,11 @@ def _imgProcessFromSource(source):
         raise RuntimeError('Unknown image extension: %s' % ext)
     with open(source, 'rb') as inFile:
         proc = method(inFile)
-        return proc.stdout.read()
+        result = proc.stdout.read()
+        proc.wait()
+        if proc.returncode != 0:
+            raise RuntimeError('Error when processing %s' % source)
+        return result
 
 
 def imgProcess(source, dest):

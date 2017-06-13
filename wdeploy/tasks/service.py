@@ -1,6 +1,6 @@
 # encoding=utf-8
 """Manage system services."""
-from subprocess import call
+from subprocess import check_call
 from wdeploy import (task,
                      utils,
                      )
@@ -37,9 +37,4 @@ def service(action, serviceName):
                    serviceName,
                    action,
                    ]
-    retVal = call(callArg)
-    if retVal == 0:
-        return
-    raise Exception('Error when changing service state: %s => %s'
-                    % (serviceName,
-                       action))
+    check_call(callArg)

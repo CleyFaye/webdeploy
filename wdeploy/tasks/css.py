@@ -68,7 +68,12 @@ def _lessProcessFromSource(source, includeDirs):
     with utils.open_utf8(source, 'r') as inFile:
         lessProc = _lessProcess(inFile, includeDirs)
         cssProc = _cssProcess(lessProc.stdout)
-        return cssProc.read()
+        result = cssProc.read()
+        cssProc.wait()
+        lessProc.wait()
+        if cssProc.returncode != 0 or lessProc.returncode != 0:
+            raise RuntimeError('Error while processing less file: %s' % source)
+        return result
 
 
 @as_user(original_user, original_group)
@@ -82,7 +87,11 @@ def _cssProcessFromSource(source):
     """
     with utils.open_utf8(source, 'r') as inFile:
         cssProc = _cssProcess(inFile)
-        return cssProc.stdout.read()
+        result = cssProc.stdout.read()
+        cssProc.wait()
+        if cssProc.returncode != 0:
+            raise RuntimeError('Error while processing CSS file %s' % source)
+        return result
 
 
 def lessProcess(source, dest, includeDirs):

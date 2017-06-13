@@ -1,11 +1,11 @@
 # encoding=utf-8
 """Reproduce an existing virtualenv"""
-from subprocess import call
+from subprocess import check_call
 from os.path import (isdir,
                      join,
                      )
 from wdeploy import task
-from wdeploy.utils import (pipeRun,
+from wdeploy.utils import (readProcessOutput,
                            makeParentPath,
                            )
 from wdeploy.user import (as_user,
@@ -32,19 +32,18 @@ def _createVirtualEnvironment(outputDir,
     if pythonBin:
         args += ['-p', pythonBin]
     args += [outputDir]
-    call(args)
+    check_call(args)
 
 
 @as_user(original_user, original_group)
 def _getRequirements(sourceDir):
-    process = pipeRun(join(sourceDir,
-                           'bin',
-                           'pip',
-                           ),
-                      None,
-                      ['freeze'],
-                      )
-    return process.stdout.read()
+    return readProcessOutput(join(sourceDir,
+                                  'bin',
+                                  'pip',
+                                  ),
+                             None,
+                             ['freeze'],
+                             )
 
 
 @as_user(prefix_user, prefix_group)
@@ -60,7 +59,7 @@ def _installRequirements(outputDir):
                        'requirements.txt',
                        ),
             ]
-    call(args)
+    check_call(args)
 
 
 @task(sourcePathArguments=['sourceDir'],

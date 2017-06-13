@@ -5,7 +5,7 @@ from os.path import (abspath,
                      basename,
                      dirname,
                      )
-from subprocess import call
+from subprocess import check_call
 from wdeploy import (config,
                      task,
                      utils,
@@ -44,11 +44,7 @@ def _runMakefile(script, target, args):
                                args[key].replace(' ', '\\ '),
                                )
                     for key in args]
-    retVal = call(callArg)
-    if retVal == 0:
-        return
-    raise RuntimeError('An error occured while running Makefile %s'
-                       % script)
+    check_call(callArg)
 
 
 @task(sourcePathArguments=['script'])

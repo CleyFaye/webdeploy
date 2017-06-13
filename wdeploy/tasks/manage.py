@@ -1,6 +1,6 @@
 # encoding=utf-8
 """Call a manage.py command in a virtualenv"""
-from subprocess import call
+from subprocess import check_call
 from os import chdir
 from os.path import join
 from wdeploy import task
@@ -26,9 +26,7 @@ def _runManage(virtualEnv, projectLocation, args):
     callArgs = [pythonPath,
                 'manage.py',
                 ] + args
-    retVal = call(callArgs)
-    if retVal != 0:
-        raise RuntimeError('Error when calling manage.py command')
+    check_call(callArgs)
 
 
 @as_user(prefix_user, prefix_group)

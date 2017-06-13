@@ -1,6 +1,6 @@
 # encoding=utf-8
 """Enable/disable Apache site config."""
-from subprocess import call
+from subprocess import check_call
 from wdeploy import task
 from logging import getLogger
 
@@ -33,7 +33,4 @@ def a2site(enable, siteName):
         callArgs = ['a2dissite']
         logg.info('Disabling apache site %s' % siteName)
     callArgs += [siteName]
-    retVal = call(callArgs)
-    if retVal == 0:
-        return
-    raise Exception('Error when enabling/disabling site "%s"' % siteName)
+    check_call(callArgs)

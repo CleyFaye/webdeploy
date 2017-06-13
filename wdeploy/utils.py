@@ -433,3 +433,41 @@ def pipeRun(binaryName,
                               stderr=subprocess.DEVNULL,
                               )
     return result
+
+
+def readProcessOutput(binaryName,
+                      inputStream,
+                      args):
+    """Run a program with the given input and return it's output.
+
+    Parameters
+    ----------
+    binaryName : string
+        The name of the program to run. Can be a simple name, in which case
+        'which' will be used, or an absolute path.
+    inputStream : file
+        A readable file to use as the process input.
+    args : list
+        List of arguments to pass to the program
+
+
+    Returns
+    -------
+    The full output of the process.
+
+    Notes
+    -----
+    The full output is returned; take care to not launch process that return an
+    insane amount of data.
+    If the process return a value different than 0, an exception is raised.
+    """
+    process = pipeRun(binaryName, inputStream, args)
+    result = process.stdout.read()
+    process.wait()
+    if process.returncode != 0:
+        raise RuntimeError('Error while running program %s (%s)'
+                           % (binaryName,
+                              process.returncode,
+                              ),
+                           )
+    return result

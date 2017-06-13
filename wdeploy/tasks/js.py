@@ -51,7 +51,11 @@ def _jsProcessFromSource(source):
     """
     with utils.open_utf8(source, 'r') as inFile:
         jsProc = _jsProcess(inFile)
-        return jsProc.stdout.read()
+        result = jsProc.stdout.read()
+        jsProc.wait()
+        if jsProc.returncode != 0:
+            raise RuntimeError('Error when minifying Javascript %s' % source)
+        return result
 
 
 def jsProcess(source, dest):
