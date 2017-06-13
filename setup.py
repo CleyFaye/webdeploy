@@ -20,7 +20,7 @@ def read(fname,
                        ).read()
 
 setup(name="web_deploy",
-      version="0.0",
+      version="0.1",
       author="Gabriel Paul 'Cley Faye' Risterucci",
       author_email="gabriel.risterucci@gmail.com",
       description=("A basic tool to automate the tasks involved in deploying a"
