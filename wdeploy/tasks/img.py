@@ -11,6 +11,7 @@ from wdeploy.user import (as_user,
                           original_user,
                           original_group,
                           writeDestinationFile,
+                          crawlDestination,
                           )
 from wdeploy.dependencies import extensionCheck
 
@@ -115,7 +116,7 @@ def img(sourceDir,
                                           updateCB=updateCB,
                                           )
     if removeStale:
-        for candidateRelativePath, name in utils.walkfiles(destinationDir):
+        for candidateRelativePath, name in crawlDestination(destinationDir):
             candidateFullPath = join(destinationDir,
                                      candidateRelativePath,
                                      name)

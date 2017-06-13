@@ -5,10 +5,7 @@ from os import (remove,
                 rmdir,
                 walk,
                 )
-from os.path import (join,
-                     isfile,
-                     getmtime,
-                     )
+from os.path import join
 from wdeploy import (task,
                      utils,
                      )
@@ -128,12 +125,13 @@ def rsync(sourceDir,
 
     for relativePath, fileName in crawlSource(sourceDir):
         excluded = False
-        for exclude in excludeList:
-            if fnmatch(fileName, exclude):
-                excluded = True
-                break
-        if excluded:
-            continue
+        if excludeList:
+            for exclude in excludeList:
+                if fnmatch(fileName, exclude):
+                    excluded = True
+                    break
+            if excluded:
+                continue
 
         sourceFiles.append(join(relativePath,
                                 fileName))
