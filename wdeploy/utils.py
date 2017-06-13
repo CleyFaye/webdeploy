@@ -23,7 +23,9 @@ import pwd
 from wdeploy import (config,
                      dependencies,
                      )
-from wdeploy.user import (getDestinationMTime,
+from wdeploy.user import (crawlSource,
+                          getSourceMTime,
+                          getDestinationMTime,
                           )
 from logging import getLogger
 
@@ -294,6 +296,9 @@ def checkDependencies(baseDir,
                       outputCB,
                       updateCB,
                       filesList=None,
+                      walkerCB=crawlSource,
+                      sourceMTimeCB=getSourceMTime,
+                      destinationMTimeCB=getDestinationMTime,
                       ):
     """Crawl a directory to find updated files.
 
@@ -331,7 +336,19 @@ def checkDependencies(baseDir,
         This runnable is only called when a file need updating.
     filesList : list(string) (optional)
         A list of relative path to crawl from the source directory. If not
-        provided, all files are checked.
+        provided, walkerCB is used
+    walkerCB : runnable
+        A runnable that takes a path as its single argument and returns a list
+        of tuples. Each tuple represent a file in the path, recursively, with
+        the first element of the tuple behing the relative path and the second
+        element behing the file name.
+    sourceMTimeCB : runnable
+        A runnable that take a path as its single argument and return the file
+        modification time. Used for source files.
+    destinationMTimeCB : runnable
+        A runnable that take a path as its single argument and return the file
+        modification time. Used for destination files. Default to
+
 
     Returns
     -------
@@ -340,7 +357,7 @@ def checkDependencies(baseDir,
         is made of absolute path.
     """
     if filesList is None:
-        sourceFilesPath = walkfiles(baseDir)
+        sourceFilesPath = walkerCB(baseDir)
         filesList = [join(x[0], x[1])
                      for x in sourceFilesPath
                      ]
@@ -369,8 +386,8 @@ def checkDependencies(baseDir,
         fileObj = allFiles[fileObjKey]
         outputPath = outputCB(fileObj['relativePath'])
         output.append(outputPath)
-        dependencies._updateMTime(fileObj)
-        outputMDate = getDestinationMTime(outputPath)
+        dependencies._updateMTime(fileObj, sourceMTimeCB)
+        outputMDate = destinationMTimeCB(outputPath)
         if outputMDate <= fileObj['modifiedDate']:
             updateCB(fileObj['fullPath'],
                      outputPath,

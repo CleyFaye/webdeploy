@@ -1,7 +1,6 @@
 # encoding=utf-8
 from os.path import (join,
                      isfile,
-                     getmtime,
                      dirname,
                      splitext,
                      )
@@ -86,18 +85,27 @@ def _checkDependencies(firstFile, newDependency):
     return False
 
 
-def _updateMTime(fileObj):
+def _updateMTime(fileObj, mtimeCB):
     """Update the modified time of a file object.
+
+    Parameters
+    ----------
+    mtimeCB : runnable
+        A runnable that take a single argument and return the modification time
+        of the file it represents.
+
 
     Notes
     -----
     This will use the newest time of both the file itself and all of its
     dependencies if any.
     """
-    selfMTime = getmtime(fileObj['fullPath'])
+    selfMTime = mtimeCB(fileObj['fullPath'])
     for dep in fileObj['deps']:
         if dep['modifiedDate'] is None:
-            _updateMTime(dep)
+            _updateMTime(dep,
+                         mtimeCB,
+                         )
         if dep['modifiedDate'] > selfMTime:
             selfMTime = dep['modifiedDate']
     fileObj['modifiedDate'] = selfMTime
