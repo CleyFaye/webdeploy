@@ -10,6 +10,12 @@ from wdeploy import (config,
                      task,
                      utils,
                      )
+from wdeploy.user import (as_user,
+                          prefix_user,
+                          prefix_group,
+                          original_user,
+                          original_group,
+                          )
 from logging import getLogger
 
 if __name__ == '__main__':
@@ -17,8 +23,36 @@ if __name__ == '__main__':
 logg = getLogger(__name__)
 
 
+@as_user(prefix_user, prefix_group)
+def _runAsPrefix(script, target, args):
+    _runMakefile(script, target, args)
+
+
+@as_user(original_user, original_group)
+def _runAsOriginal(script, target, args):
+    _runMakefile(script, target, args)
+
+
+def _runMakefile(script, target, args):
+    makefileDir = abspath(dirname(script))
+    chdir(makefileDir)
+    callArg = [utils.which(utils.MAKE),
+               '-f', basename(script),
+               target]
+    if args:
+        callArg += ['%s=%s' % (key,
+                               args[key].replace(' ', '\\ '),
+                               )
+                    for key in args]
+    retVal = call(callArg)
+    if retVal == 0:
+        return
+    raise RuntimeError('An error occured while running Makefile %s'
+                       % script)
+
+
 @task(sourcePathArguments=['script'])
-def makefile(script, target, args, runAsRoot):
+def makefile(script, target, args, runAs):
     """Run a Makefile.
 
     Parameters
@@ -29,31 +63,21 @@ def makefile(script, target, args, runAsRoot):
         Makefile target
     args : dict
         Makefile variables, provided as a key=value arguments to make
-    runAsRoot : bool
-        If the makefile should run as root. If False, sudo will be used to run
-        as the user indicated in the project configuration
+    runAs : string
+        Indicate under which account the makefile should run. Can be one of the
+        following : 'root', 'original', 'prefix'. You should make sure that the
+        requested account have access to the actual Makefile and its directory.
     """
-    makefileDir = abspath(dirname(script))
-    chdir(makefileDir)
-    if runAsRoot:
-        logg.info('Running make script "%s" as root' % script)
-        callArg = []
+    if runAs == 'root':
+        func = _runMakefile
+    elif runAs == 'prefix':
+        func = _runAsPrefix
+    elif runAs == 'original':
+        func = _runAsOriginal
     else:
-        logg.info('Running make script "%s" as "%s"' % (script,
-                                                        config().PREFIX_USER,
-                                                        ),
-                  )
-        user = config().PREFIX_USER
-        if user:
-            callArg = [utils.which(utils.SUDO), '-u', user]
-    callArg += [utils.which(utils.MAKE),
-                '-f', basename(script),
-                target]
-    callArg += ['%s=%s' % (key,
-                           args[key].replace(' ', '\\ '))
-                for key in args]
-    retVal = call(callArg)
-    if retVal == 0:
-        return
-    raise Exception('An error occured while running Makefile %s'
-                    % script)
+        raise RuntimeError('Unknown runAs argument (%s)' % runAs)
+    logg.info('Running make script "%s" as "%s"' % (script,
+                                                    runAs,
+                                                    ),
+              )
+    func(script, target, args)
