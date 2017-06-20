@@ -15,6 +15,8 @@ from wdeploy.dependencies import extensionCheck
 from wdeploy.user import (as_user,
                           original_user,
                           original_group,
+                          writeDestinationFile,
+                          readSourceFile,
                           )
 from .css import cssProcess
 from .js import jsProcess
@@ -86,7 +88,7 @@ def third(listDir,
 
 def _outputPathHandlerFactory(outputDir,
                               prefix,
-                              ):
+                              fileslist):
     """Create an outputCB handler for checkDependencies().
 
     Parameters
@@ -95,7 +97,8 @@ def _outputPathHandlerFactory(outputDir,
         Base output directory
     prefix : string
         Module specific prefix, appended to outputDir
-
+    fileslist : dictionary
+        Key=source relative path, Value=destination relative directory
 
     Returns
     -------
@@ -106,7 +109,7 @@ def _outputPathHandlerFactory(outputDir,
     def runnable(relativePath):
         return join(outputDir,
                     prefix,
-                    relativePath,
+                    fileslist[relativePath],
                     )
     return runnable
 
@@ -142,7 +145,7 @@ def deployThird(sourceDir,
                                 dependencyCheck=None,
                                 outputCB=_outputPathHandlerFactory(jsDir,
                                                                    prefix,
-                                                                   ),
+                                                                   files['js']),
                                 updateCB=updateJSFile,
                                 filesList=files['js'],
                                 )
@@ -154,10 +157,29 @@ def deployThird(sourceDir,
                                 dependencyCheck=None,
                                 outputCB=_outputPathHandlerFactory(cssDir,
                                                                    prefix,
+                                                                   files['css'],
                                                                    ),
                                 updateCB=updateCSSFile,
                                 filesList=files['css'],
                                 )
+    if 'cssother' in files:
+        lsof = files['cssother']
+        utils.checkDependencies(baseDir=sourceDir,
+                                includeDirs=None,
+                                localInclude=False,
+                                valididtyCheck=None,
+                                dependencyCheck=None,
+                                outputCB=_outputPathHandlerFactory(cssDir,
+                                                                   prefix,
+                                                                   lsof),
+                                updateCB=copyFile,
+                                filesList=lsof)
+
+
+def copyFile(sourcepath,
+             destinationpath):
+    writeDestinationFile(destinationpath,
+                         readSourceFile(sourcepath))
 
 
 def updateJSFile(sourcePath,
