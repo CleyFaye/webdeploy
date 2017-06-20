@@ -28,7 +28,7 @@ def _lessProcess(sourceFile, includeDirs):
     if includeDirs:
         for includeDir in includeDirs:
             args += ['--include-path=%s' % includeDir]
-    args += ['-sm', 'on',
+    args += ['-sm=on',
              '-ru',
              '-x',
              '-']
