@@ -128,7 +128,6 @@ def runTask(taskDesc):
     """
     taskName = taskDesc['name']
     taskArgs = taskDesc['args'].copy()
-    print('RUNNING TASK:%s' % taskName)
     if 'desc' in taskDesc:
         taskDescription = taskDesc['desc']
     else:
