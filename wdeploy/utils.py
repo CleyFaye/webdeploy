@@ -435,6 +435,7 @@ def pipeRun(binaryName,
         args = [binaryName] + args
     else:
         args = [which(binaryName)] + args
+    print('ARGS:%s' % args)
     result = subprocess.Popen(args,
                               stdin=inputStream or subprocess.DEVNULL,
                               stdout=subprocess.PIPE,
