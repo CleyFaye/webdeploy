@@ -49,7 +49,7 @@ def sudoMe():
 
 def main():
     if getuid() != 0:
-        logg.warn('This script need to be root to operate correctly')
+        logg.warn('This script needs to be root to operate correctly')
         sudoMe()
     else:
         run()
