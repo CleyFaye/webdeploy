@@ -365,6 +365,8 @@ def checkDependencies(baseDir,
     if validityCheck is None:
         def validityCheck(a):
             return True
+    for x in filesList:
+        print('FILE:%s' % x)
     allFiles = {x: {'modifiedDate': None,
                     'relativePath': x,
                     'fullPath': join(baseDir, x),
