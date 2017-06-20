@@ -357,6 +357,7 @@ def checkDependencies(baseDir,
         is made of absolute path.
     """
     if filesList is None:
+        print('USING AUTO FILE LIST')
         sourceFilesPath = walkerCB(baseDir)
         filesList = [join(x[0], x[1])
                      for x in sourceFilesPath
@@ -374,7 +375,9 @@ def checkDependencies(baseDir,
                 }
     dependencyFiles = {}
 
+    print('AAA')
     for fileObjKey in allFiles:
+        print('FFF:%s' % fileObjKey)
         fileObj = allFiles[fileObjKey]
         dependencies._fillDeps(fileObj,
                                allFiles,

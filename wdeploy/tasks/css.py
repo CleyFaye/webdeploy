@@ -128,6 +128,7 @@ def css(sourceDir,
     includeDirs is a list of directories included when parsing import
     directives in lessc files.
     """
+    print('CSS TASK')
     def dependencyCheck(absolutePath):
         with utils.open_utf8(absolutePath, 'r') as src:
             imports = [x.group('import')
