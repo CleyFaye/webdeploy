@@ -134,7 +134,13 @@ def css(sourceDir,
             imports = [x.group('import')
                        for x in LESS_IMPORT_RE.finditer(src.read())
                        ]
-        return imports
+        fixedimports = []
+        for importname in imports:
+            if importname.endswith('.less'):
+                fixedimports.append(importname)
+            else:
+                fixedimports.append('%s.less' % importname)
+        return fixedimports
 
     def outputCB(relativePath):
         name, _ = splitext(relativePath)
