@@ -34,7 +34,7 @@ def _getDependencyFile(dependencyRelPath,
                           dependencyCheck,
                           )
                 return newFileObject
-    return RuntimeError('Missing dependency: %s' % dependencyRelPath)
+    raise RuntimeError('Missing dependency: %s' % dependencyRelPath)
 
 
 def _fillDeps(fileObject,
