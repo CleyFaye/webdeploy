@@ -68,7 +68,7 @@ def _lessProcessFromSource(source, includeDirs):
     with utils.open_utf8(source, 'r') as inFile:
         lessProc = _lessProcess(inFile, includeDirs)
         cssProc = _cssProcess(lessProc.stdout)
-        result = cssProc.read()
+        result = cssProc.stdout.read()
         cssProc.wait()
         lessProc.wait()
         if cssProc.returncode != 0 or lessProc.returncode != 0:
