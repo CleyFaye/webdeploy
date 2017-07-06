@@ -26,7 +26,8 @@ def _writeRedirect(outFile,
                   RewriteEngine On
                   RewriteCond %%{HTTPS} off
                   RewriteRule (.*) https://%%{HTTP_HOST}%%{REQUEST_URI}
-                  <Else>
+                  </IfModule>
+                  <IfModile !mod_rewrite.c>
                   Redirect permanent / https://%s/
                   </IfModule>
                   </VirtualHost>\n""" % (hostName, hostName))
@@ -89,7 +90,7 @@ def _writeVHost(outFile,
                           apacheConfig['tls'][2])
         outFile.write('SSLVerifyClient None\n')
         outFile.write('Header always set Strict-Transport-Security '
-                      + '"max-age=63072001; includeSubdomains;')
+                      + '"max-age=63072001; includeSubdomains;"\n')
     # VHost footer
     outFile.write('</VirtualHost>\n')
 
