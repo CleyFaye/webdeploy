@@ -27,7 +27,7 @@ def _writeRedirect(outFile,
                   RewriteCond %%{HTTPS} off
                   RewriteRule (.*) https://%%{HTTP_HOST}%%{REQUEST_URI}
                   </IfModule>
-                  <IfModile !mod_rewrite.c>
+                  <IfModule !mod_rewrite.c>
                   Redirect permanent / https://%s/
                   </IfModule>
                   </VirtualHost>\n""" % (hostName, hostName))
