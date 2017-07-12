@@ -177,6 +177,7 @@ def apacheGrantAccess(outFile, directory, cacheStrategy=None):
     outFile.write('Require all granted\n')
     if cacheStrategy:
         cacheStrategy = cacheStrategy.lower()
+        outFile.write('ExpiresActive "on"\n')
         if cacheStrategy == 'no-cache':
             outFile.write('ExpiresDefault "access"\n')
         elif cacheStrategy == 'cache':
