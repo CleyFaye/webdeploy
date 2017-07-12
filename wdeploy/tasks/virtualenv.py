@@ -47,6 +47,17 @@ def _getRequirements(sourceDir):
 
 
 @as_user(prefix_user, prefix_group)
+def _get_installed_requirements(outputDir):
+    return readProcessOutput(join(outputDir,
+                                  'bin',
+                                  'pip',
+                                  ),
+                             None,
+                             ['freeze'],
+                             )
+
+
+@as_user(prefix_user, prefix_group)
 def _installRequirements(outputDir):
     pipPath = join(outputDir,
                    'bin',
@@ -89,6 +100,9 @@ def virtualenv(sourceDir,
     """
     _createVirtualEnvironment(outputDir, pythonBin)
     requirements = _getRequirements(sourceDir)
+    installed_requirements = _get_installed_requirements(outputDir)
+    if requirements == installed_requirements:
+        return
     writeDestinationFile(join(outputDir,
                               'requirements.txt',
                               ),
