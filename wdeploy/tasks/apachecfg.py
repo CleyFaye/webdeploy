@@ -75,9 +75,13 @@ def _writeVHost(outFile,
     # Aliases
     if 'alias' in apacheConfig and apacheConfig['alias']:
         for alias in apacheConfig['alias']:
+            if len(alias) >= 3:
+                cacheStrategy = alias[2]
+            else:
+                cacheStrategy = None
             outFile.write('Alias /%s/ %s/\n' %
                           (alias[0], join(config().PREFIX, alias[1])))
-            apacheGrantAccess(outFile, alias[1])
+            apacheGrantAccess(outFile, alias[1], cacheStrategy)
     # TLS
     if useTLS:
         outFile.write('SSLEngine On\n')
@@ -105,7 +109,9 @@ def apachecfg(name, apacheConfig):
     name is the name of the generated configuration file.
 
     apacheConfig is a dictionary that can contain:
-    - alias: an array of tuple for aliasing URL to directories on the FS
+    - alias: an array of tuple for aliasing URL to directories on the FS. Tuple
+             can either have two values (URL, directory) or three values
+             (URL, directory, cache strategy).
     - venv: the path to the VENV (relative to PREFIX)
     - app: the path to the app (relative to PREFIX)
     - loglevel: the apache log level for this virtual host. If not provided,
@@ -120,6 +126,11 @@ def apachecfg(name, apacheConfig):
 
     Note that the configuration file will be created in PREFIX; a symlink to it
     in the appropriate apache configuration directory is a good idea.
+
+    For aliases, cache strategy can be either "no-cache" to explicitely mark all
+    files to expire as soon as they are available, or "cache" to mark them to be
+    cached (this is done by setting their expiration date at a month after
+    access).
     """
     cgiName = 'cgi/wsgi.py'
     runTask({'name': 'cgi',
@@ -160,8 +171,16 @@ def apachecfg(name, apacheConfig):
     utils.cfg_chmod(apacheFullPath)
 
 
-def apacheGrantAccess(outFile, directory):
+def apacheGrantAccess(outFile, directory, cacheStrategy=None):
     """Write an all-access directive to a directory in an apache config dir."""
     outFile.write('<Directory %s>\n' % join(config().PREFIX, directory))
     outFile.write('Require all granted\n')
+    if cacheStrategy:
+        cacheStrategy = cacheStrategy.lower()
+        if cacheStrategy == 'no-cache':
+            outFile.write('ExpiresDefault "access"\n')
+        elif cacheStrategy == 'cache':
+            outFile.write('ExpiresDefault "access plus 1 month"\n')
+        else:
+            raise RuntimeError('Invalid cache strategy: "%s"' % cacheStrategy)
     outFile.write('</Directory>\n')
