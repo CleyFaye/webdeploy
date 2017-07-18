@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 from setuptools import setup
 
@@ -12,13 +13,11 @@ def read(fname,
     """
     return open(os.path.join(os.path.dirname(__file__),
                              fname),
-                'r',
-                'utf-8',
-                ).read()
+                'r').read()
 
 
 setup(name="web_deploy",
-      version="0.2.1",
+      version="0.3.0",
       author="Gabriel Paul 'Cley Faye' Risterucci",
       author_email="gabriel.risterucci@gmail.com",
       description=("A basic tool to automate the tasks involved in deploying a"
