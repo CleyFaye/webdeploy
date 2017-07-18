@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-# encoding=utf-8
 import os
-from codecs import open as open_codecs
 from setuptools import setup
 
 
@@ -13,11 +10,12 @@ def read(fname,
     -----
     This is used for the long_description.
     """
-    return open_codecs(os.path.join(os.path.dirname(__file__),
-                                    fname),
-                       'r',
-                       'utf-8',
-                       ).read()
+    return open(os.path.join(os.path.dirname(__file__),
+                             fname),
+                'r',
+                'utf-8',
+                ).read()
+
 
 setup(name="web_deploy",
       version="0.2.1",
@@ -36,6 +34,7 @@ setup(name="web_deploy",
           'console_scripts': ['webdeploy=webdeploy:main'],
       },
       long_description=read('README.md'),
+      python_requires='>=3',
       classifiers=[
           "Development Status :: 4 - Beta",
           "Topic :: Software Development :: Build Tools",
