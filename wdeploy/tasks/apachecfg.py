@@ -16,6 +16,18 @@ if __name__ == '__main__':
 logg = getLogger(__name__)
 
 
+# List of mimetypes to pass through DEFLATE
+MIME_COMPRESS = ['text/plain',
+                 'text/xml',
+                 'text/html',
+                 'text/css',
+                 'text/csv',
+                 'application/javascript',
+                 'application/xml',
+                 'image/svg+xml',
+                 'image/svg']
+
+
 def _writeRedirect(outFile,
                    hostName,
                    ):
@@ -34,27 +46,27 @@ def _writeRedirect(outFile,
 
 
 def _writeVHost(outFile,
-                useTLS,
-                hostName,
-                logLevel,
                 fullCGIPath,
-                apacheConfig,
+                apache_config,
                 ):
     """Write a vhost entry."""
     # VHost header
-    if useTLS:
+    if apache_config['tls']:
+        _writeRedirect(outFile,
+                       apache_config['hostname'],
+                       )
         outFile.write('<VirtualHost *:443>\n')
     else:
         outFile.write('<VirtualHost *:80>\n')
-    outFile.write('ServerName "%s"\n' % hostName)
+    outFile.write('ServerName "%s"\n' % apache_config['hostname'])
     # Log Level
-    outFile.write('LogLevel %s\n' % logLevel)
+    outFile.write('LogLevel %s\n' % apache_config['loglevel'])
     # WSGI Script
     pythonPath = join(config().PREFIX,
-                      apacheConfig['venv'],
+                      apache_config['venv'],
                       )
     appPath = join(config().PREFIX,
-                   apacheConfig['app'],
+                   apache_config['app'],
                    )
     outFile.write('WSGIDaemonProcess %s python-home=%s python-path=%s\n' %
                   (config().PROJECT_NAME,
@@ -73,25 +85,34 @@ def _writeVHost(outFile,
                   )
     apacheGrantAccess(outFile, 'cgi')
     # Aliases
-    if 'alias' in apacheConfig and apacheConfig['alias']:
-        for alias in apacheConfig['alias']:
-            if len(alias) >= 3:
-                cacheStrategy = alias[2]
-            else:
-                cacheStrategy = None
-            outFile.write('Alias /%s/ %s/\n' %
-                          (alias[0], join(config().PREFIX, alias[1])))
-            apacheGrantAccess(outFile, alias[1], cacheStrategy)
+    for alias in apache_config['alias']:
+        if len(alias) >= 3:
+            cacheStrategy = alias[2]
+        else:
+            cacheStrategy = None
+        outFile.write('Alias /%s/ %s/\n' %
+                      (alias[0], join(config().PREFIX, alias[1])))
+        apacheGrantAccess(outFile, alias[1], cacheStrategy)
+    # Compression
+    if apache_config['enable_compression']:
+        outFile.write('<IfModule mod_deflate.c>\n')
+        outFile.write('SetOutputFilter DEFLATE\n')
+        outFile.write('DeflateCompressionLevel 9\n')
+        for mime_format in MIME_COMPRESS:
+            outFile.write('AddOutputFilterByType DEFLATE %s\n' % mime_format)
+        outFile.write('Header append Vary User-Agent env=!dont-vary\n')
+        outFile.write('</IfModule>\n')
+        pass
     # TLS
-    if useTLS:
+    if apache_config['tls']:
         outFile.write('SSLEngine On\n')
         outFile.write('SSLCertificateFile %s\n' %
-                      apacheConfig['tls'][1])
+                      apache_config['tls'][1])
         outFile.write('SSLCertificateKeyFile %s\n' %
-                      apacheConfig['tls'][0])
-        if len(apacheConfig['tls']) == 3:
+                      apache_config['tls'][0])
+        if len(apache_config['tls']) == 3:
             outFile.write('SSLCACertificateFile %s\n' %
-                          apacheConfig['tls'][2])
+                          apache_config['tls'][2])
         outFile.write('SSLVerifyClient None\n')
         outFile.write('Header always set Strict-Transport-Security '
                       + '"max-age=63072001; includeSubdomains;"\n')
@@ -117,6 +138,8 @@ def apachecfg(name, apacheConfig):
     - loglevel: the apache log level for this virtual host. If not provided,
                 default to 'info'.
     - hostname: the name of this vhost.
+    - enable_compression: (optional) output directives to use the deflate module
+                          (default to False).
     - tls: a tuple containing path to the private and public key. If not
            provided, only HTTP configuration is produced.
            An optional third value can be used to indicate the CA certificate
@@ -142,28 +165,23 @@ def apachecfg(name, apacheConfig):
     apacheFullDir = dirname(apacheFullPath)
     utils.real_mkdir(apacheFullDir)
 
-    if 'hostname' in apacheConfig and apacheConfig['hostname']:
-        hostName = apacheConfig['hostname']
-    else:
-        hostName = 'localhost'
+    if 'hostname' not in apacheConfig:
+        apacheConfig['hostname'] = 'localhost'
 
-    if 'loglevel' in apacheConfig and apacheConfig['loglevel']:
-        logLevel = apacheConfig['loglevel']
-    else:
-        logLevel = 'info'
+    if 'loglevel' not in apacheConfig:
+        apacheConfig['loglevel'] = 'info'
+
+    if 'enable_compression' not in apacheConfig:
+        apacheConfig['enable_compression'] = False
+
+    if 'tls' not in apacheConfig:
+        apacheConfig['tls'] = None
+
+    if 'alias' not in apacheConfig:
+        apacheConfig['alias'] = []
 
     with utils.open_utf8(apacheFullPath, 'w') as outFile:
-        if 'tls' in apacheConfig and apacheConfig['tls']:
-            _writeRedirect(outFile,
-                           hostName,
-                           )
-            useTLS = True
-        else:
-            useTLS = False
         _writeVHost(outFile,
-                    useTLS,
-                    hostName,
-                    logLevel,
                     fullCGIPath,
                     apacheConfig,
                     )
